@@ -35,6 +35,7 @@ export type OutgoingMessage = {
 	recipient?: string;
 	subject?: string;
 	channel?: Channel;
+	channelName?: string;
 	body: string;
 	createdAt?: string;
 	sent: boolean;

@@ -126,13 +126,21 @@
 				</div>
 				<div class="flex gap-2">
 					<Button
+						variant="outline"
+						size="sm"
+						class="h-7 text-xs gap-1.5"
+						onclick={() => workspace.reset()}
+					>
+						Reset workspace
+					</Button>
+					<Button
 						variant="destructive"
 						size="sm"
 						class="h-7 text-xs gap-1.5"
 						onclick={clearWorkspace}
 					>
 						<Trash2Icon class="size-3" />
-						Clear workspace
+						Clear
 					</Button>
 				</div>
 			</div>

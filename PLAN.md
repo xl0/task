@@ -57,7 +57,9 @@ type OutgoingMessage = {
 	recipient?: string;
 	subject?: string;
 	channel?: 'email' | 'slack' | 'whatsapp';
+	channelName?: string;
 	body: string;
+	createdAt?: string;
 	sent: boolean;
 };
 
@@ -89,16 +91,21 @@ type DailyBriefing = {
 
 ### Done
 
-- Two-pane inbox UI with merged left nav+unfolded-list pane and right detail pane
+- Two-pane shell with data-driven accordion nav (left) and detail pane (right), resizable with persisted sizes
 - Path-based routing: `/inbox`, `/inbox/m{id}`, `/decide`, `/decide/a{id}`, `/delegate/...`, `/ignore/...`, `/drafts`, `/sent`
-- Workspace store with persisted messages, actionables, outgoingMessages, briefing
-- Mock data: 20 messages + 12 actionables + outgoing messages (draft + sent) + markdown daily briefing
-- Dev panel: import raw JSON message dumps, clear workspace
+- Workspace store with persisted messages, actionables, outgoingMessages, briefing; reset + clear
+- Mock data: 20 messages + 12 actionables + 7 outgoing messages (draft + sent) + markdown daily briefing
+- Dev panel: import raw JSON, reset workspace (restore mocks), clear workspace
 - Mark read/unread, mark all unread
-- Actionable views with priority sorting and badges
+- Actionable detail: two-pane view with summary (left) + unified timeline of related messages and replies (right)
+  - Incoming messages in accordion with keyboard nav (arrow keys)
+  - Outgoing replies (drafts/sent) shown always-visible, indented under parent message
+  - Drafts editable inline; sent messages read-only
+  - Outgoing messages support `channelName` for Slack channel display
 - Drafts/Sent list panes wired to outgoing messages
 - Draft editor route (`/drafts/o{id}`) and sent detail route (`/sent/o{id}`)
-- Daily brief rendered on inbox default detail (`/inbox`) with markdown rendering via unified and actionables-derived sections
+- Daily brief shown as default detail for all sections (inbox, drafts, sent, decide, delegate, ignore)
+- Clicking open nav section toggles it closed (navigates to `/`)
 
 ### Next
 

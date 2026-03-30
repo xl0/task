@@ -4,7 +4,7 @@ export const mockActionables: Actionable[] = [
 	// === DECIDE ===
 	{
 		id: 'a1',
-		messageIds: ['m16'],
+		messageIds: ['m16', 'm9', 'm2'],
 		outgoingMessageIds: ['o1'],
 		action: 'decide',
 		title: 'Payment service: rollback vs hotfix',
@@ -26,7 +26,7 @@ export const mockActionables: Actionable[] = [
 	},
 	{
 		id: 'a3',
-		messageIds: ['m1', 'm10', 'm15', 'm18', 'm20'],
+		messageIds: ['m1', 'm3', 'm10', 'm15', 'm18', 'm20'],
 		outgoingMessageIds: ['o3'],
 		action: 'decide',
 		title: 'Thursday scheduling conflict',
@@ -71,7 +71,7 @@ export const mockActionables: Actionable[] = [
 	},
 	{
 		id: 'a7',
-		messageIds: ['m1', 'm18'],
+		messageIds: ['m1', 'm10', 'm18'],
 		outgoingMessageIds: ['o7'],
 		action: 'delegate',
 		title: 'Revenue projections for Meridian',

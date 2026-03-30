@@ -92,6 +92,21 @@ class WorkspaceStore {
 		if (patch.subject !== undefined) msg.subject = patch.subject;
 		if (patch.body !== undefined) msg.body = patch.body;
 		if (patch.channel !== undefined) msg.channel = patch.channel;
+		if (patch.channelName !== undefined) msg.channelName = patch.channelName;
+	}
+
+	sendOutgoingMessage(id: OutgoingMessageId) {
+		const msg = this.#outgoingMessages.current.find((m) => m.id === id);
+		if (!msg || msg.sent) return;
+		msg.sent = true;
+		msg.createdAt = new Date().toISOString();
+	}
+
+	reset() {
+		this.#messages.current = mockMessages;
+		this.#actionables.current = mockActionables;
+		this.#outgoingMessages.current = mockOutgoingMessages;
+		this.#briefing.current = mockDailyBriefing;
 	}
 
 	clear() {
