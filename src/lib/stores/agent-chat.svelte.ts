@@ -10,17 +10,29 @@ import type { Message, MessageId } from '$lib/types';
 
 // --- Prompts ---
 
-const CHAT_SYSTEM = `You are an operational inbox assistant for the Innate workspace.
+const SHARED_WORKSPACE_RULES = `Workspace model and operating rules:
+- Messages are inbound communications.
+- Actionables are triage decisions over one or more messages.
+- Outgoing messages are drafts/sends linked to actionables (and optionally a parent message).
+- Briefing is the concise CEO synthesis of current state.
+- Classify each message exactly once via actionables.
+- When replying to a specific inbound message, prefer the same channel unless there is a clear reason to switch.
+- Prefer updating existing records over creating duplicates.`;
+
+const CHAT_SYSTEM = `You are an operational inbox assistant for the CEO's workspace.
 Use tools to read and update workspace state when needed.
 Prefer checking existing items before writing.
 Keep responses concise and practical.`;
 
-const AGENT_LOOP_SYSTEM = `You are an operational inbox assistant for the CEO's Innate workspace.
+const AGENT_LOOP_SYSTEM = `You are an operational inbox assistant for the CEO's workspace.
 Your current workspace state has been pre-loaded via tool results below — use it directly, do not re-read unless verifying a change you just made.
 
 Use workspace tools to create/update actionables, draft outgoing messages, and generate a daily briefing.`;
 
 const AGENT_LOOP_PROMPT = `Process the inbox and produce triage artifacts aligned with the Developer Brief.
+
+Shared rules:
+${SHARED_WORKSPACE_RULES}
 
 Data model contract (must hold at the end):
 - Messages are raw inbound communications (email/slack/whatsapp).
@@ -216,9 +228,17 @@ export class AgentChatState {
 
 	#chatHistory: ModelMessage[] = [];
 
+	#buildChatBootstrapMessages(): ModelMessage[] {
+		return [...buildPreloadMessages(), { role: 'user', content: SHARED_WORKSPACE_RULES }];
+	}
+
+	#startNewChatContext() {
+		this.#chatHistory = this.#buildChatBootstrapMessages();
+	}
+
 	clearMessages = () => {
 		this.messages = [];
-		this.#chatHistory = [];
+		this.#startNewChatContext();
 		this.#appendLog({ kind: 'info', title: 'Started new chat' });
 	};
 
@@ -282,6 +302,10 @@ export class AgentChatState {
 	sendMessage = async (text: string) => {
 		const content = text.trim();
 		if (!content || this.isLoading) return;
+
+		if (this.#chatHistory.length === 0) {
+			this.#startNewChatContext();
+		}
 
 		this.#appendUserMessage(content);
 

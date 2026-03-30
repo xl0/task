@@ -11,11 +11,14 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import WrenchIcon from '@lucide/svelte/icons/wrench';
 	import UploadIcon from '@lucide/svelte/icons/upload';
+	import FolderOpenIcon from '@lucide/svelte/icons/folder-open';
+	import DownloadIcon from '@lucide/svelte/icons/download';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let snapshotFileInput = $state<HTMLInputElement | null>(null);
 	let parsedMessages: ReturnType<typeof parseRawMessages> = $state([]);
+	let importBatchSize = $state(5);
 	let fileName = $state('');
 	let error = $state('');
 	let parsedSnapshot: WorkspaceSnapshot | null = $state(null);
@@ -39,12 +42,18 @@
 					workspace.messages.map((message) => message.id)
 				);
 				parsedMessages = messages;
+				importBatchSize = Math.min(5, messages.length);
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Failed to parse JSON';
 				parsedMessages = [];
 			}
 		};
 		reader.readAsText(file);
+	}
+
+	function openMessageFilePicker() {
+		if (!fileInput) return;
+		fileInput.click();
 	}
 
 	function handleSnapshotFileSelect(e: Event) {
@@ -66,6 +75,11 @@
 			}
 		};
 		reader.readAsText(file);
+	}
+
+	function openSnapshotFilePicker() {
+		if (!snapshotFileInput) return;
+		snapshotFileInput.click();
 	}
 
 	function saveWorkspaceSnapshot() {
@@ -111,16 +125,28 @@
 
 	function addMessages(count?: number) {
 		error = '';
-		const toAdd = count ? parsedMessages.slice(0, count) : parsedMessages;
+		const safeCount = count
+			? Math.max(1, Math.min(count, parsedMessages.length))
+			: parsedMessages.length;
+		const toAdd = parsedMessages.slice(0, safeCount);
 		workspace.addMessages(toAdd);
-		parsedMessages = [];
-		fileName = '';
-		if (fileInput) fileInput.value = '';
+
+		if (safeCount >= parsedMessages.length) {
+			parsedMessages = [];
+			importBatchSize = 5;
+			fileName = '';
+			if (fileInput) fileInput.value = '';
+			return;
+		}
+
+		parsedMessages = parsedMessages.slice(safeCount);
+		importBatchSize = Math.min(importBatchSize, parsedMessages.length);
 	}
 
 	function clearWorkspace() {
 		workspace.clear();
 		parsedMessages = [];
+		importBatchSize = 5;
 		fileName = '';
 		error = '';
 		parsedSnapshot = null;
@@ -209,8 +235,18 @@
 					type="file"
 					accept=".json"
 					onchange={handleFileSelect}
-					class="text-sm"
+					class="hidden"
 				/>
+
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-8 w-fit gap-1.5 text-xs"
+					onclick={openMessageFilePicker}
+				>
+					<FolderOpenIcon class="size-3.5" />
+					Open messages JSON
+				</Button>
 
 				{#if error}
 					<p class="text-xs text-destructive">{error}</p>
@@ -225,67 +261,33 @@
 							<UploadIcon class="size-3" />
 							Add all {parsedMessages.length}
 						</Button>
-						{#if parsedMessages.length > 5}
-							<Button
-								variant="outline"
-								size="sm"
-								class="h-7 text-xs"
-								onclick={() => addMessages(5)}
-							>
-								Add 5
-							</Button>
-						{/if}
-						{#if parsedMessages.length > 1}
-							<Button
-								variant="outline"
-								size="sm"
-								class="h-7 text-xs"
-								onclick={() => addMessages(1)}
-							>
-								Add 1
-							</Button>
-						{/if}
 					</div>
-				{/if}
-			</div>
-
-			<Separator />
-
-			<!-- Workspace snapshot -->
-			<div class="flex flex-col gap-3">
-				<h3 class="text-sm font-medium">Workspace Snapshot</h3>
-
-				<div class="flex gap-2">
-					<Button variant="outline" size="sm" class="h-7 text-xs" onclick={saveWorkspaceSnapshot}>
-						Save JSON
-					</Button>
-				</div>
-
-				<Input
-					bind:ref={snapshotFileInput}
-					type="file"
-					accept=".json"
-					onchange={handleSnapshotFileSelect}
-					class="text-sm"
-				/>
-
-				{#if snapshotError}
-					<p class="text-xs text-destructive">{snapshotError}</p>
-				{/if}
-
-				{#if snapshotNotice}
-					<p class="text-xs text-muted-foreground">{snapshotNotice}</p>
-				{/if}
-
-				{#if parsedSnapshot}
-					<p class="text-xs text-muted-foreground">
-						Parsed snapshot from {snapshotFileName}: {parsedSnapshot.messages.length} messages,
-						{parsedSnapshot.actionables.length} actionables,
-						{parsedSnapshot.outgoingMessages.length} outgoing
-					</p>
-					<Button size="sm" class="h-7 text-xs" onclick={loadWorkspaceSnapshot}
-						>Load snapshot</Button
-					>
+					<div class="flex items-end gap-2">
+						<div class="flex flex-col gap-1">
+							<Label class="text-xs">Batch size</Label>
+							<Input
+								type="number"
+								min={1}
+								max={parsedMessages.length}
+								class="h-7 w-24 text-xs"
+								value={String(importBatchSize)}
+								oninput={(e) => {
+									const next = Number.parseInt(e.currentTarget.value, 10);
+									if (Number.isNaN(next)) return;
+									importBatchSize = Math.max(1, Math.min(next, parsedMessages.length));
+								}}
+							/>
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-7 gap-1.5 text-xs"
+							onclick={() => addMessages(importBatchSize)}
+						>
+							<UploadIcon class="size-3" />
+							Add batch
+						</Button>
+					</div>
 				{/if}
 			</div>
 
@@ -317,6 +319,54 @@
 						Clear
 					</Button>
 				</div>
+
+				<Input
+					bind:ref={snapshotFileInput}
+					type="file"
+					accept=".json"
+					onchange={handleSnapshotFileSelect}
+					class="hidden"
+				/>
+
+				<div class="flex gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						class="h-8 gap-1.5 text-xs"
+						onclick={openSnapshotFilePicker}
+					>
+						<FolderOpenIcon class="size-3.5" />
+						Import snapshot
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						class="h-8 gap-1.5 text-xs"
+						onclick={saveWorkspaceSnapshot}
+					>
+						<DownloadIcon class="size-3.5" />
+						Export snapshot
+					</Button>
+				</div>
+
+				{#if snapshotError}
+					<p class="text-xs text-destructive">{snapshotError}</p>
+				{/if}
+
+				{#if snapshotNotice}
+					<p class="text-xs text-muted-foreground">{snapshotNotice}</p>
+				{/if}
+
+				{#if parsedSnapshot}
+					<p class="text-xs text-muted-foreground">
+						Parsed snapshot from {snapshotFileName}: {parsedSnapshot.messages.length} messages,
+						{parsedSnapshot.actionables.length} actionables,
+						{parsedSnapshot.outgoingMessages.length} outgoing
+					</p>
+					<Button size="sm" class="h-7 text-xs" onclick={loadWorkspaceSnapshot}>
+						Load snapshot
+					</Button>
+				{/if}
 			</div>
 		</div>
 	</Sheet.Content>
