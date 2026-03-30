@@ -6,6 +6,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import OutgoingDraftEditor from '$lib/components/OutgoingDraftEditor.svelte';
 	import MailIcon from '@lucide/svelte/icons/mail';
 	import HashIcon from '@lucide/svelte/icons/hash';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
@@ -16,9 +17,7 @@
 	let { actionable }: { actionable: Actionable } = $props();
 
 	const linkedOutgoing = $derived(
-		actionable.outgoingMessageIds
-			.map((id) => workspace.getOutgoingMessage(id))
-			.filter((m): m is NonNullable<typeof m> => m !== undefined)
+		workspace.outgoingMessages.filter((message) => message.parentActionableId === actionable.id)
 	);
 
 	const drafts = $derived(linkedOutgoing.filter((m) => !m.sent));
@@ -84,12 +83,6 @@
 		whatsapp: MessageCircleIcon
 	};
 
-	const channelLabel: Record<Channel, string> = {
-		email: 'Email',
-		slack: 'Slack',
-		whatsapp: 'WhatsApp'
-	};
-
 	let expandedMessage = $state<string>('');
 
 	function handleMessagesKeydown(e: KeyboardEvent) {
@@ -131,51 +124,8 @@
 		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 	}
 
-	function onChannelChange(draftId: string, event: Event) {
-		const channel = (event.currentTarget as HTMLSelectElement).value as Channel;
-		workspace.updateOutgoingMessage(draftId as any, { channel });
-		// Clear channelName when switching away from slack
-		if (channel !== 'slack') {
-			workspace.updateOutgoingMessage(draftId as any, { channelName: undefined });
-		}
-	}
-
-	function onChannelNameInput(draftId: string, event: Event) {
-		workspace.updateOutgoingMessage(draftId as any, {
-			channelName: (event.currentTarget as HTMLInputElement).value
-		});
-	}
-
-	function onRecipientInput(draftId: string, event: Event) {
-		workspace.updateOutgoingMessage(draftId as any, {
-			recipient: (event.currentTarget as HTMLInputElement).value
-		});
-	}
-
-	function onSubjectInput(draftId: string, event: Event) {
-		workspace.updateOutgoingMessage(draftId as any, {
-			subject: (event.currentTarget as HTMLInputElement).value
-		});
-	}
-
-	function onBodyInput(draftId: string, event: Event) {
-		workspace.updateOutgoingMessage(draftId as any, {
-			body: (event.currentTarget as HTMLTextAreaElement).value
-		});
-	}
-
 	function sendDraft(draftId: string) {
 		workspace.sendOutgoingMessage(draftId as any);
-	}
-
-	function autosize(node: HTMLTextAreaElement) {
-		function resize() {
-			node.style.height = 'auto';
-			node.style.height = node.scrollHeight + 'px';
-		}
-		resize();
-		node.addEventListener('input', resize);
-		return { destroy: () => node.removeEventListener('input', resize) };
 	}
 </script>
 
@@ -213,46 +163,7 @@
 									Send
 								</Button>
 							</div>
-							<div class="flex items-center gap-2">
-								<select
-									class="h-8 border border-input bg-background px-2 text-xs ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									value={draft.channel ?? 'email'}
-									onchange={(e) => onChannelChange(draft.id, e)}
-								>
-									<option value="email">Email</option>
-									<option value="slack">Slack</option>
-									<option value="whatsapp">WhatsApp</option>
-								</select>
-								{#if draft.channel === 'slack'}
-									<input
-										class="h-8 flex-1 border border-input bg-background px-3 text-xs ring-offset-background outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-										value={draft.channelName ?? ''}
-										oninput={(e) => onChannelNameInput(draft.id, e)}
-										placeholder="#channel"
-									/>
-								{:else}
-									<input
-										class="h-8 flex-1 border border-input bg-background px-3 text-xs ring-offset-background outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-										value={draft.recipient ?? ''}
-										oninput={(e) => onRecipientInput(draft.id, e)}
-										placeholder="Recipient"
-									/>
-								{/if}
-							</div>
-							{#if draft.channel !== 'slack'}
-								<input
-									class="h-8 w-full border border-input bg-background px-3 text-xs ring-offset-background outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-									value={draft.subject ?? ''}
-									oninput={(e) => onSubjectInput(draft.id, e)}
-									placeholder="Subject"
-								/>
-							{/if}
-							<textarea
-								use:autosize
-								class="w-full resize-none border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-								value={draft.body}
-								oninput={(e) => onBodyInput(draft.id, e)}
-							></textarea>
+							<OutgoingDraftEditor {draft} />
 						</div>
 						{#if drafts.length > 1}
 							<Separator />
@@ -290,7 +201,9 @@
 													{msg.senderName}
 												</span>
 												{#if msg.channelName}
-													<span class="shrink-0 text-xs text-muted-foreground">{msg.channelName}</span>
+													<span class="shrink-0 text-xs text-muted-foreground"
+														>{msg.channelName}</span
+													>
 												{/if}
 												<span class="shrink-0 text-xs text-muted-foreground">
 													{formatTime(msg.receivedAt)}
@@ -306,13 +219,18 @@
 									</Accordion.Header>
 									<Accordion.Content class="overflow-hidden">
 										<div class="border-t border-border/30 bg-muted/30 px-4 py-3">
-											<pre class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</pre>
+											<pre
+												class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</pre>
 										</div>
 									</Accordion.Content>
 								</Accordion.Item>
 								{#each entry.replies as reply (reply.id)}
 									{@const ReplyIcon = reply.sent ? SendIcon : FileEditIcon}
-									<div class="ml-4 border-l-2 border-border/50 border-b border-b-border/50 px-4 py-3 {reply.sent ? 'bg-accent/30' : 'bg-blue-500/5'}">
+									<div
+										class="ml-4 border-b border-l-2 border-border/50 border-b-border/50 px-4 py-3 {reply.sent
+											? 'bg-accent/30'
+											: 'bg-blue-500/5'}"
+									>
 										<div class="mb-2 flex items-center gap-2">
 											<ReplyIcon class="size-3.5 shrink-0 text-muted-foreground" />
 											<Badge variant="outline" class="h-5 text-[10px]">
@@ -332,9 +250,10 @@
 											{/if}
 										</div>
 										{#if reply.subject}
-												<div class="mb-1 text-xs font-medium">{reply.subject}</div>
-											{/if}
-											<pre class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</pre>
+											<div class="mb-1 text-xs font-medium">{reply.subject}</div>
+										{/if}
+										<pre
+											class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</pre>
 									</div>
 								{/each}
 							{:else}
@@ -369,11 +288,16 @@
 										</Accordion.Trigger>
 									</Accordion.Header>
 									<Accordion.Content class="overflow-hidden">
-										<div class="border-t border-border/30 px-4 py-3 {om.sent ? 'bg-accent/30' : 'bg-blue-500/5'}">
+										<div
+											class="border-t border-border/30 px-4 py-3 {om.sent
+												? 'bg-accent/30'
+												: 'bg-blue-500/5'}"
+										>
 											{#if om.subject}
 												<div class="mb-1 text-xs font-medium">{om.subject}</div>
 											{/if}
-											<pre class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{om.body}</pre>
+											<pre
+												class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{om.body}</pre>
 										</div>
 									</Accordion.Content>
 								</Accordion.Item>

@@ -10,7 +10,6 @@ IMPORTANT: At the start of each conversation, always fully read `CODE.md`. You m
 ## Guidelines
 
 - Always use bun/bunx, not npm
-- Use shadcn components when possible. You can install new components.
 - Don't do excessive speculative try/catch with fall-backs. Only catch real errors, and default to a clear fail/error message, don't implement fallback solutions.
 If we are adding experimental features, no need to gate them - we can always just remove them later.
 - Avoid shallow abstractions. Avoid single-use abstractions.
@@ -30,12 +29,14 @@ If we are adding experimental features, no need to gate them - we can always jus
 Note: we likely already have a dev server running on localhost:5173
 
 - Keep the end of turn summaries very concise.
+- No need to git diff at the end of the turn.
 
 
 ## UI
 
 - Keep it clean, err on the side of minimalism.
 - Avoid adding custom colors, styles or fonts per element - use the one pre-defined in layout.css
+- Use shadcn components when possible. You can install new components.
 
 ## Lovely Docs
 

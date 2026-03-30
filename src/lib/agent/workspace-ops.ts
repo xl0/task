@@ -15,14 +15,6 @@ type Page<T> = {
 	offset: number;
 };
 
-type MessageUpdatePatch = {
-	summary?: Message['summary'];
-	read?: Message['read'];
-};
-
-type OutgoingInsertInput = Omit<OutgoingMessage, 'id' | 'createdAt'>;
-type OutgoingUpdatePatch = Partial<Omit<OutgoingMessage, 'id' | 'createdAt'>>;
-
 function paginate<T>(items: T[], limit: number, offset: number): Page<T> {
 	const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
 	const safeOffset = Number.isFinite(offset) && offset >= 0 ? Math.floor(offset) : 0;
@@ -55,26 +47,6 @@ function mergeDefined<T extends object>(target: T, patch: Partial<T>): T {
 	return next;
 }
 
-function assertRequired<T extends object>(
-	input: Partial<T>,
-	required: Array<keyof T>,
-	entityName: string
-) {
-	const missing = required.filter((key) => input[key] === undefined);
-	if (missing.length > 0) {
-		throw new Error(`Missing required ${entityName} fields: ${missing.join(', ')}`);
-	}
-}
-
-function assertHasUpdateFields(input: Record<string, unknown>, entityName: string) {
-	const hasField = Object.values(input).some((value) => value !== undefined);
-	if (!hasField) {
-		throw new Error(
-			`No fields provided to update ${entityName}. Provide at least one field to update.`
-		);
-	}
-}
-
 function assertExistingIds(
 	ids: string[],
 	existingIds: Set<string>,
@@ -86,17 +58,6 @@ function assertExistingIds(
 		throw new Error(
 			`Invalid ${entityName} ${fieldName}: ${missing.join(', ')} not found in workspace.`
 		);
-	}
-}
-
-function assertExistingId(
-	id: string,
-	existingIds: Set<string>,
-	fieldName: string,
-	entityName: string
-) {
-	if (!existingIds.has(id)) {
-		throw new Error(`Invalid ${entityName} ${fieldName}: ${id} not found in workspace.`);
 	}
 }
 
@@ -113,14 +74,6 @@ export function listOutgoingMessages(limit = 100, offset = 0) {
 }
 
 export function insertMessage(input: Omit<Message, 'id'>) {
-	const required: Array<keyof Omit<Message, 'id'>> = [
-		'channel',
-		'senderName',
-		'receivedAt',
-		'text'
-	];
-	assertRequired(input, required, 'message');
-
 	const derivedSummary =
 		input.summary ??
 		input.subject ??
@@ -135,13 +88,13 @@ export function insertMessage(input: Omit<Message, 'id'>) {
 	) as MessageId;
 	const created: Message = {
 		id,
-		channel: input.channel!,
-		senderName: input.senderName!,
+		channel: input.channel,
+		senderName: input.senderName,
 		subject: input.subject,
 		channelName: input.channelName,
-		receivedAt: input.receivedAt!,
+		receivedAt: input.receivedAt,
 		summary: derivedSummary,
-		text: input.text!,
+		text: input.text,
 		read: input.read ?? false
 	};
 
@@ -149,13 +102,9 @@ export function insertMessage(input: Omit<Message, 'id'>) {
 	return { id };
 }
 
-export function updateMessage(id: MessageId, patch: MessageUpdatePatch) {
-	assertHasUpdateFields(patch as Record<string, unknown>, 'message');
-
+export function updateMessage(id: MessageId, patch: { summary?: string; read?: boolean }) {
 	const index = workspace.messages.findIndex((item) => item.id === id);
-	if (index === -1) {
-		throw new Error(`Message ${id} not found`);
-	}
+	if (index === -1) throw new Error(`Message ${id} not found`);
 
 	const messages = [...workspace.messages];
 	messages[index] = mergeDefined(messages[index], patch as Partial<Message>);
@@ -172,28 +121,9 @@ function validateActionableReferences(input: Partial<Omit<Actionable, 'id'>>) {
 			'actionable'
 		);
 	}
-
-	if (input.outgoingMessageIds) {
-		assertExistingIds(
-			input.outgoingMessageIds,
-			new Set(workspace.outgoingMessages.map((message) => message.id)),
-			'outgoingMessageIds',
-			'actionable'
-		);
-	}
 }
 
 export function insertActionable(input: Omit<Actionable, 'id'>) {
-	const required: Array<keyof Omit<Actionable, 'id'>> = [
-		'messageIds',
-		'outgoingMessageIds',
-		'action',
-		'title',
-		'summary',
-		'priority',
-		'status'
-	];
-	assertRequired(input, required, 'actionable');
 	validateActionableReferences(input);
 
 	const id = nextId(
@@ -203,7 +133,6 @@ export function insertActionable(input: Omit<Actionable, 'id'>) {
 	const created: Actionable = {
 		id,
 		messageIds: input.messageIds,
-		outgoingMessageIds: input.outgoingMessageIds,
 		action: input.action,
 		title: input.title,
 		summary: input.summary,
@@ -216,13 +145,10 @@ export function insertActionable(input: Omit<Actionable, 'id'>) {
 }
 
 export function updateActionable(id: ActionableId, patch: Partial<Omit<Actionable, 'id'>>) {
-	assertHasUpdateFields(patch as Record<string, unknown>, 'actionable');
 	validateActionableReferences(patch);
 
 	const index = workspace.actionables.findIndex((item) => item.id === id);
-	if (index === -1) {
-		throw new Error(`Actionable ${id} not found`);
-	}
+	if (index === -1) throw new Error(`Actionable ${id} not found`);
 
 	const actionables = [...workspace.actionables];
 	actionables[index] = mergeDefined(actionables[index], patch as Partial<Actionable>);
@@ -230,19 +156,18 @@ export function updateActionable(id: ActionableId, patch: Partial<Omit<Actionabl
 	return { id: actionables[index].id };
 }
 
-function validateOutgoingReferences(input: OutgoingUpdatePatch | Partial<OutgoingInsertInput>) {
+function validateOutgoingReferences(input: Partial<Omit<OutgoingMessage, 'id' | 'createdAt'>>) {
 	if (input.parentMessageId) {
-		assertExistingId(
-			input.parentMessageId,
+		assertExistingIds(
+			[input.parentMessageId],
 			new Set(workspace.messages.map((message) => message.id)),
 			'parentMessageId',
 			'outgoing message'
 		);
 	}
-
 	if (input.parentActionableId) {
-		assertExistingId(
-			input.parentActionableId,
+		assertExistingIds(
+			[input.parentActionableId],
 			new Set(workspace.actionables.map((actionable) => actionable.id)),
 			'parentActionableId',
 			'outgoing message'
@@ -250,9 +175,7 @@ function validateOutgoingReferences(input: OutgoingUpdatePatch | Partial<Outgoin
 	}
 }
 
-export function insertOutgoingMessage(input: OutgoingInsertInput) {
-	const required: Array<keyof OutgoingInsertInput> = ['body', 'sent'];
-	assertRequired(input, required, 'outgoing message');
+export function insertOutgoingMessage(input: Omit<OutgoingMessage, 'id' | 'createdAt'>) {
 	validateOutgoingReferences(input);
 
 	const id = nextId(
@@ -276,13 +199,12 @@ export function insertOutgoingMessage(input: OutgoingInsertInput) {
 	return { id };
 }
 
-export function updateOutgoingMessage(id: OutgoingMessageId, patch: OutgoingUpdatePatch) {
-	assertHasUpdateFields(patch as Record<string, unknown>, 'outgoing message');
-
+export function updateOutgoingMessage(
+	id: OutgoingMessageId,
+	patch: Partial<Omit<OutgoingMessage, 'id' | 'createdAt'>>
+) {
 	const index = workspace.outgoingMessages.findIndex((item) => item.id === id);
-	if (index === -1) {
-		throw new Error(`Outgoing message ${id} not found`);
-	}
+	if (index === -1) throw new Error(`Outgoing message ${id} not found`);
 
 	const existing = workspace.outgoingMessages[index];
 	if (existing.sent) {

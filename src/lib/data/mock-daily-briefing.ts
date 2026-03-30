@@ -4,7 +4,7 @@ export const mockDailyBriefing: DailyBriefing = {
 	generatedAt: '2026-03-18T12:30:00Z',
 	markdown: `# Focus for today
 
-Payments and Meridian terms are the two decisions that should not slip.
+Payments and Northwind terms are the two decisions that should not slip.
 
 ## Priorities
 

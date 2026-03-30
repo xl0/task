@@ -5,6 +5,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import PlayIcon from '@lucide/svelte/icons/play';
 
 	let prompt = $state('');
 	let endEl: HTMLDivElement;
@@ -50,10 +51,21 @@
 				</p>
 			</div>
 		</div>
-		<Button variant="outline" size="sm" class="gap-1.5" onclick={agentChat.clearMessages}>
-			<PlusIcon class="size-3" />
-			New chat
-		</Button>
+		<div class="flex items-center gap-2">
+			<Button
+				size="sm"
+				class="gap-1.5"
+				onclick={agentChat.runMainLoop}
+				disabled={agentChat.isLoading}
+			>
+				<PlayIcon class="size-3" />
+				Run loop
+			</Button>
+			<Button variant="outline" size="sm" class="gap-1.5" onclick={agentChat.clearMessages}>
+				<PlusIcon class="size-3" />
+				New chat
+			</Button>
+		</div>
 	</div>
 
 	<div class="mx-auto flex w-full max-w-3xl flex-col gap-3">

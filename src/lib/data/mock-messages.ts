@@ -4,7 +4,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm1',
 		channel: 'email',
-		senderName: 'Sarah Chen',
+		senderName: 'Sarah Chen <sarah.chen@meridianventures.com>',
 		subject: 'Follow-up: Series B timeline',
 		receivedAt: '2026-03-18T08:12:00Z',
 		summary:
@@ -54,7 +54,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm6',
 		channel: 'email',
-		senderName: 'David Morrison',
+		senderName: 'David Morrison <david.m@company.com>',
 		subject: 'Horizon project - concerns',
 		receivedAt: '2026-03-18T09:22:00Z',
 		summary: 'Flags timeline mismatch — client expects 6 weeks, realistic estimate is 10-12.',
@@ -73,7 +73,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm8',
 		channel: 'email',
-		senderName: 'Rachel Kim',
+		senderName: 'Rachel Kim <rachel.kim@techstaffing.io>',
 		subject: 'Candidate shortlist for VP Engineering role',
 		receivedAt: '2026-03-18T09:45:00Z',
 		summary:
@@ -135,7 +135,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm14',
 		channel: 'email',
-		senderName: 'Mark Zhang',
+		senderName: 'Mark Zhang <mark.z@company.com>',
 		subject: 'Quick update - marketing Q2 plan',
 		receivedAt: '2026-03-18T11:15:00Z',
 		summary:
@@ -146,7 +146,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm15',
 		channel: 'email',
-		senderName: 'Laura Singh',
+		senderName: 'Laura Singh <laura.s@company.com>',
 		subject: 'RE: Thursday meeting',
 		receivedAt: '2026-03-18T11:30:00Z',
 		summary: 'Leadership sync confirmed Thursday 2pm — conflicts with Sarah Chen investor meeting.',
@@ -167,7 +167,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm17',
 		channel: 'email',
-		senderName: 'David Morrison',
+		senderName: 'David Morrison <david.m@company.com>',
 		subject: 'RE: Horizon project - update',
 		receivedAt: '2026-03-18T12:00:00Z',
 		summary:
@@ -199,7 +199,7 @@ export const mockMessages: Message[] = [
 	{
 		id: 'm20',
 		channel: 'email',
-		senderName: 'Laura Singh',
+		senderName: 'Laura Singh <laura.s@company.com>',
 		subject: 'RE: Thursday meeting - room change',
 		receivedAt: '2026-03-18T12:45:00Z',
 		summary: 'Leadership sync moved to 3pm in small meeting room — resolves the 2pm conflict.',

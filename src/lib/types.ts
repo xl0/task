@@ -19,7 +19,6 @@ export type Message = {
 export type Actionable = {
 	id: ActionableId;
 	messageIds: MessageId[];
-	outgoingMessageIds: OutgoingMessageId[];
 	action: 'ignore' | 'delegate' | 'decide';
 	title: string;
 	summary: string;

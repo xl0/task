@@ -41,7 +41,6 @@ type Message = {
 type Actionable = {
 	id: `a${number}`;
 	messageIds: Array<`m${number}`>;
-	outgoingMessageIds: Array<`o${number}`>;
 	action: 'ignore' | 'delegate' | 'decide';
 	title: string;
 	summary: string;
@@ -72,7 +71,7 @@ type DailyBriefing = {
 
 - `Message` is foundational input; all other domain entities reference `messageId`s.
 - `Actionable` depends on one or more `Message` items.
-- `OutgoingMessage` optionally depends on a specific `Actionable` and/or `Message`.
+- `OutgoingMessage` optionally depends on a specific `Actionable` and/or `Message`; outgoing-to-actionable is the canonical link direction.
 - `DailyBriefing` stores one markdown body; structured rollups are derived from current actionables.
 - Agent/runtime execution state and UI view state are intentionally out of Workspace.
 
@@ -96,6 +95,7 @@ type DailyBriefing = {
 - Mock data: 20 messages + 12 actionables + 7 outgoing messages (draft + sent) + markdown daily briefing
 - Dev panel: import raw JSON, reset workspace (restore mocks), clear workspace
 - Dev panel AI config: provider/model/API key controls persisted in browser storage
+- Dev panel workspace snapshot export/import (save full workspace JSON and load it back independently from message ingestion)
 - Mark read/unread, mark all unread
 - Actionable detail: two-pane view with summary (left) + unified timeline of related messages and replies (right)
   - Incoming messages in accordion with keyboard nav (arrow keys)
@@ -109,14 +109,19 @@ type DailyBriefing = {
 - Workspace toolset implemented (`get_*`, `insert_*`, `update_*`) with valibot schemas and paging (`limit`/`offset` + `total`), including constrained update fields + automatic timestamp handling
 - Agent chat harness wired to provider/model/API key from dev panel and can execute workspace tools
 - Quake-style dev console (`~`) logs LLM steps + tool calls/results with expandable details
+- Main loop trigger implemented in agent chat (`Run loop`): clears prior generated outputs, runs a high-step tool loop, and rebuilds actionables/drafts/briefing from current messages
 
 ### Next
 
-- Agent loop implementation (LLM-powered triage)
 - Tighten agent system prompt and loop behavior for reliable inbox triage
 - OutgoingMessage generation/refresh from agent loop (instead of static mocks)
 - Daily briefing generation/refresh from agent loop (instead of static mock)
 - Send flow from draft editor (mark sent + move to Sent)
+
+### UI shadcn follow-ups
+
+- `src/lib/components/OutgoingDraftEditor.svelte`: replaced raw `<textarea>` with shadcn `Textarea` and preserved autosize behavior. ✅
+- `src/lib/components/DevPanel.svelte`: replaced native file picker `<input type="file">` controls with shadcn `Input` (type `file`). ✅
 
 ### Agent Tooling Todo
 

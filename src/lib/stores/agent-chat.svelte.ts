@@ -1,22 +1,156 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateText, stepCountIs, type ModelMessage } from 'ai';
+import { generateText, generateObject, stepCountIs, type ModelMessage } from 'ai';
+import { valibotSchema } from '@ai-sdk/valibot';
+import * as v from 'valibot';
 import { workspaceTools } from '$lib/agent/workspace-tools';
+import { listMessages, listActionables, listOutgoingMessages } from '$lib/agent/workspace-ops';
 import { devStore, type Provider } from '$lib/stores/dev-store.svelte';
+import { createProviderModel } from '$lib/ai/model-factory';
+import { workspace } from '$lib/stores/workspace.svelte';
+import type { Message, MessageId } from '$lib/types';
 
-const SYSTEM_PROMPT = `You are an operational inbox assistant for the Innate workspace.
+// --- Prompts ---
 
+const CHAT_SYSTEM = `You are an operational inbox assistant for the Innate workspace.
 Use tools to read and update workspace state when needed.
 Prefer checking existing items before writing.
 Keep responses concise and practical.`;
 
-type ChatRole = 'user' | 'assistant';
+const AGENT_LOOP_SYSTEM = `You are an operational inbox assistant for the CEO's Innate workspace.
+Your current workspace state has been pre-loaded via tool results below — use it directly, do not re-read unless verifying a change you just made.
+
+Use workspace tools to create/update actionables, draft outgoing messages, and generate a daily briefing.`;
+
+const AGENT_LOOP_PROMPT = `Process the inbox and produce triage artifacts.
+
+Requirements:
+1) Classify every message exactly once as ignore, delegate, or decide.
+2) Catch traps and context changes — later messages may override or update earlier ones.
+3) Pay attention to scheduling: identify time-sensitive items, deadlines, and meeting conflicts across messages. Group related messages into the same actionable when they concern the same topic or event.
+4) Delegate items must name a specific person from message context (no generic owner).
+5) Draft responses must match channel tone:
+   - email: professional and structured
+   - slack: concise and direct
+   - whatsapp: conversational
+
+Execution:
+- Create actionables with insert_actionable. Every message id must appear in at least one actionable's messageIds.
+  - actionable.summary must explain the classification rationale and recommended next step.
+- For delegate/decide actionables, create drafts with insert_outgoing_message (sent=false, parentActionableId set, parentMessageId when replying to a specific message).
+- Update existing actionables/drafts when the pre-loaded state already has relevant ones — don't duplicate.
+- Ignore actionables can omit drafts when no reply is needed.
+- Ignore spam and phishing emails.
+- Write daily briefing (update_briefing) with these sections:
+  ## Top Decisions
+  ## Delegations
+  ## Risks & Flags
+  Include concrete recommendations. Do not include raw message ids.
+
+Before finishing, verify no message is left unclassified`;
+
+// --- Summary generation ---
+
+const summarySchema = valibotSchema(
+	v.strictObject({
+		summary: v.pipe(v.string(), v.minLength(1), v.maxLength(180))
+	})
+);
+
+function summaryPrompt(msg: Message): string {
+	return [
+		`Channel: ${msg.channel}`,
+		`Sender: ${msg.senderName}`,
+		msg.subject ? `Subject: ${msg.subject}` : null,
+		msg.channelName ? `Channel name: ${msg.channelName}` : null,
+		`Received at: ${msg.receivedAt}`,
+		'Message body:',
+		msg.text
+	]
+		.filter(Boolean)
+		.join('\n');
+}
+
+// --- Workspace preloading ---
+
+function toPlain<T>(value: T): T {
+	return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildPreloadMessages(): ModelMessage[] {
+	const reads = [
+		{ id: 'pre-msgs', name: 'get_messages', result: toPlain(listMessages()) },
+		{ id: 'pre-acts', name: 'get_actionables', result: toPlain(listActionables()) },
+		{ id: 'pre-out', name: 'get_outgoing_messages', result: toPlain(listOutgoingMessages()) },
+		{ id: 'pre-brief', name: 'get_briefing', result: { item: toPlain(workspace.briefing) } }
+	];
+
+	const toolCalls: ModelMessage = {
+		role: 'assistant',
+		content: reads.map((r) => ({
+			type: 'tool-call' as const,
+			toolCallId: r.id,
+			toolName: r.name,
+			input: {}
+		}))
+	};
+
+	const toolResults: ModelMessage = {
+		role: 'tool',
+		content: reads.map((r) => ({
+			type: 'tool-result' as const,
+			toolCallId: r.id,
+			toolName: r.name,
+			output: { type: 'json' as const, value: r.result }
+		}))
+	};
+
+	return [toolCalls, toolResults];
+}
+
+// --- Helpers ---
+
+function toSerializable(value: unknown): unknown {
+	if (value === undefined) return undefined;
+	try {
+		return JSON.parse(JSON.stringify($state.snapshot(value as object)));
+	} catch {
+		if (value instanceof Error) {
+			return { name: value.name, message: value.message, stack: value.stack };
+		}
+		return { message: String(value) };
+	}
+}
+
+type TokenStats = { input: number; output: number; cachedInput: number };
+
+function usageToTokens(u: {
+	inputTokens?: number;
+	outputTokens?: number;
+	cachedInputTokens?: number;
+}): TokenStats {
+	return {
+		input: u.inputTokens ?? 0,
+		output: u.outputTokens ?? 0,
+		cachedInput: u.cachedInputTokens ?? 0
+	};
+}
+
+function buildSystemMessage(provider: Provider, prompt: string): ModelMessage {
+	if (provider === 'anthropic') {
+		return {
+			role: 'system',
+			content: prompt,
+			providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } }
+		};
+	}
+	return { role: 'system', content: prompt };
+}
+
+// --- Types ---
 
 type AgentTextMessage = {
 	kind: 'text';
 	id: string;
-	role: ChatRole;
+	role: 'user' | 'assistant';
 	content: string;
 	createdAt: string;
 	error?: boolean;
@@ -36,13 +170,7 @@ type AgentToolMessage = {
 	createdAt: string;
 };
 
-type AgentChatMessage = AgentTextMessage | AgentToolMessage;
-
-type TokenStats = {
-	input: number;
-	output: number;
-	cachedInput: number;
-};
+export type AgentChatMessage = AgentTextMessage | AgentToolMessage;
 
 type AgentLogEntry = {
 	id: string;
@@ -53,74 +181,7 @@ type AgentLogEntry = {
 	details?: unknown;
 };
 
-function toSerializable(value: unknown): unknown {
-	if (value === undefined) return undefined;
-
-	try {
-		return JSON.parse(JSON.stringify($state.snapshot(value as any)));
-	} catch {
-		if (value instanceof Error) {
-			return {
-				name: value.name,
-				message: value.message,
-				stack: value.stack
-			};
-		}
-
-		return { message: String(value) };
-	}
-}
-
-function usageToTokens(usage: {
-	inputTokens?: number;
-	outputTokens?: number;
-	cachedInputTokens?: number;
-}): TokenStats {
-	return {
-		input: usage.inputTokens ?? 0,
-		output: usage.outputTokens ?? 0,
-		cachedInput: usage.cachedInputTokens ?? 0
-	};
-}
-
-function createModel(provider: Provider, modelId: string, apiKey: string) {
-	switch (provider) {
-		case 'openrouter': {
-			const openrouter = createOpenAI({
-				name: 'openrouter',
-				baseURL: 'https://openrouter.ai/api/v1',
-				apiKey,
-				headers: {
-					'HTTP-Referer': 'http://localhost:5173',
-					'X-Title': 'Innate'
-				}
-			});
-			return openrouter(modelId);
-		}
-		case 'anthropic':
-			return createAnthropic({ apiKey })(modelId);
-		case 'openai':
-			return createOpenAI({ apiKey })(modelId);
-		case 'google':
-			return createGoogleGenerativeAI({ apiKey })(modelId);
-	}
-}
-
-function buildSystemMessage(provider: Provider): ModelMessage {
-	if (provider === 'anthropic') {
-		return {
-			role: 'system',
-			content: SYSTEM_PROMPT,
-			providerOptions: {
-				anthropic: {
-					cacheControl: { type: 'ephemeral' }
-				}
-			}
-		};
-	}
-
-	return { role: 'system', content: SYSTEM_PROMPT };
-}
+// --- State ---
 
 export class AgentChatState {
 	messages = $state<AgentChatMessage[]>([]);
@@ -128,16 +189,12 @@ export class AgentChatState {
 	isLoading = $state(false);
 	isConsoleOpen = $state(false);
 
-	#history: ModelMessage[] = [];
+	#chatHistory: ModelMessage[] = [];
 
 	clearMessages = () => {
 		this.messages = [];
-		this.#history = [];
-		this.#appendLog({
-			kind: 'info',
-			title: 'Started new chat',
-			details: {}
-		});
+		this.#chatHistory = [];
+		this.#appendLog({ kind: 'info', title: 'Started new chat' });
 	};
 
 	clearLogs = () => {
@@ -148,58 +205,94 @@ export class AgentChatState {
 		this.isConsoleOpen = !this.isConsoleOpen;
 	};
 
-	sendMessage = async (raw: string) => {
-		const content = raw.trim();
+	// --- Agent loop (separate from chat) ---
+
+	runMainLoop = async () => {
+		if (this.isLoading) return;
+
+		if (!devStore.apiKey.trim()) {
+			this.#appendAssistantMessage('Set an API key in Dev Panel first.', true);
+			return;
+		}
+
+		if (workspace.messages.length === 0) {
+			this.#appendAssistantMessage('No messages to process. Import messages first.', true);
+			return;
+		}
+
+		this.messages = [];
+		workspace.setActionables([]);
+		workspace.setOutgoingMessages([]);
+		workspace.setBriefing(null);
+
+		this.#appendLog({
+			kind: 'info',
+			title: 'Starting agent loop',
+			details: { messageCount: workspace.messages.length }
+		});
+
+		this.#appendUserMessage('Run morning inbox loop');
+
+		try {
+			// Step 1: ensure all messages have summaries
+			await this.#ensureSummaries();
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : 'Summary generation failed';
+			this.#appendAssistantMessage(msg, true);
+			this.#appendLog({ kind: 'error', title: 'Summary generation failed', details: { msg } });
+			return;
+		}
+
+		// Step 2: preload workspace state and run agent
+		const preload = buildPreloadMessages();
+		await this.#runGenerate(
+			AGENT_LOOP_SYSTEM,
+			[...preload, { role: 'user', content: AGENT_LOOP_PROMPT }],
+			120
+		);
+	};
+
+	// --- Interactive chat ---
+
+	sendMessage = async (text: string) => {
+		const content = text.trim();
 		if (!content || this.isLoading) return;
 
-		this.messages = [
-			...this.messages,
-			{
-				kind: 'text',
-				id: crypto.randomUUID(),
-				role: 'user',
-				content,
-				createdAt: new Date().toISOString()
-			}
-		];
+		this.#appendUserMessage(content);
 
+		if (!devStore.apiKey.trim()) {
+			this.#appendAssistantMessage('Set an API key in Dev Panel first.', true);
+			return;
+		}
+
+		const messages: ModelMessage[] = [...this.#chatHistory, { role: 'user', content }];
+		const result = await this.#runGenerate(CHAT_SYSTEM, messages, 20);
+
+		if (result) {
+			this.#chatHistory = [
+				...this.#chatHistory,
+				{ role: 'user', content },
+				...result.response.messages
+			];
+		}
+	};
+
+	// --- Core generate ---
+
+	async #runGenerate(systemPrompt: string, messages: ModelMessage[], maxSteps: number) {
 		const provider = devStore.provider;
 		const model = devStore.model;
 		const apiKey = devStore.apiKey.trim();
 
-		if (!apiKey) {
-			this.#appendAssistantMessage('Set an API key in Dev Panel first.', true);
-			this.#appendLog({
-				kind: 'error',
-				title: 'Missing API key',
-				details: { provider, model }
-			});
-			return;
-		}
-
 		this.isLoading = true;
-		this.#appendLog({
-			kind: 'info',
-			title: 'LLM request',
-			details: {
-				provider,
-				model,
-				cache: provider === 'anthropic' ? 'anthropic cacheControl=ephemeral' : 'provider default'
-			}
-		});
-
-		const requestMessages: ModelMessage[] = [
-			buildSystemMessage(provider),
-			...this.#history,
-			{ role: 'user', content }
-		];
+		this.#appendLog({ kind: 'info', title: 'LLM request', details: { provider, model } });
 
 		try {
 			const result = await generateText({
-				model: createModel(provider, model, apiKey),
-				messages: requestMessages,
+				model: createProviderModel(provider, model, apiKey),
+				messages: [buildSystemMessage(provider, systemPrompt), ...messages],
 				tools: workspaceTools,
-				stopWhen: stepCountIs(20),
+				stopWhen: stepCountIs(maxSteps),
 				experimental_onToolCallFinish: (event) => {
 					const { toolCall, durationMs, stepNumber, success } = event;
 					const step = stepNumber !== undefined ? stepNumber + 1 : null;
@@ -219,7 +312,6 @@ export class AgentChatState {
 						title: toolCall.toolName,
 						details: {
 							step,
-							toolCallId: toolCall.toolCallId,
 							durationMs,
 							input: toolCall.input,
 							success,
@@ -232,50 +324,110 @@ export class AgentChatState {
 					const tokens = usageToTokens(step.usage);
 					this.#appendLog({
 						kind: 'llm',
-						title: `Step ${step.stepNumber + 1} ${step.model.provider}/${step.model.modelId}`,
+						title: `Step ${step.stepNumber + 1}`,
 						tokens,
 						details: {
-							inputText: content,
-							outputText: step.text,
 							tokens: [tokens.input, tokens.output, tokens.cachedInput],
-							finishReason: step.finishReason,
-							step: step.stepNumber + 1
+							finishReason: step.finishReason
 						}
 					});
 				}
 			});
 
-			this.#history = [...this.#history, { role: 'user', content }, ...result.response.messages];
-
-			const reply = result.text.trim().length > 0 ? result.text : 'Done.';
+			const reply = result.text.trim() || 'Done.';
 			this.#appendAssistantMessage(reply);
-			const totalTokens = usageToTokens(result.totalUsage);
 
+			const totalTokens = usageToTokens(result.totalUsage);
 			this.#appendLog({
 				kind: 'llm',
 				title: 'LLM complete',
 				tokens: totalTokens,
 				details: {
-					inputText: content,
-					outputText: reply,
 					tokens: [totalTokens.input, totalTokens.output, totalTokens.cachedInput],
 					finishReason: result.finishReason,
-					steps: result.steps.length,
-					warnings: result.warnings
+					steps: result.steps.length
 				}
 			});
+
+			return result;
 		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Chat request failed';
+			const message = error instanceof Error ? error.message : 'Request failed';
 			this.#appendAssistantMessage(message, true);
-			this.#appendLog({
-				kind: 'error',
-				title: 'LLM error',
-				details: { message }
-			});
+			this.#appendLog({ kind: 'error', title: 'LLM error', details: { message } });
+			return null;
 		} finally {
 			this.isLoading = false;
 		}
-	};
+	}
+
+	// --- Summary generation ---
+
+	async #ensureSummaries() {
+		const unsummarized = workspace.messages.filter((m) => !m.summary?.trim());
+		if (unsummarized.length === 0) return;
+
+		const provider = devStore.provider;
+		const summaryModelId = devStore.cheapModel;
+		const apiKey = devStore.apiKey.trim();
+		if (!apiKey) throw new Error('API key required to generate summaries.');
+
+		this.#appendAssistantMessage(`Generating AI summaries for ${unsummarized.length} messages...`);
+		this.#appendLog({
+			kind: 'info',
+			title: `Generating summaries for ${unsummarized.length} messages`,
+			details: { provider, model: summaryModelId }
+		});
+
+		const model = createProviderModel(provider, summaryModelId, apiKey);
+		const summaryMap = new Map<MessageId, string>();
+		let done = 0;
+
+		await Promise.all(
+			unsummarized.map(async (msg) => {
+				const { object } = await generateObject({
+					model,
+					schema: summarySchema,
+					system:
+						'Write concise inbox summaries. One sentence, 8-20 words, focused on the key request, risk, or decision.',
+					prompt: summaryPrompt(msg),
+					temperature: 0.1,
+					maxOutputTokens: 80
+				});
+				const normalized = object.summary.replace(/\s+/g, ' ').trim();
+				if (!normalized) throw new Error(`Empty summary returned for ${msg.id}`);
+				summaryMap.set(msg.id, normalized);
+				this.#appendLog({
+					kind: 'info',
+					title: `Summary ${++done}/${unsummarized.length}: ${msg.id}`,
+					details: { summary: normalized }
+				});
+			})
+		);
+
+		workspace.setMessages(
+			workspace.messages.map((m) =>
+				summaryMap.has(m.id) ? { ...m, summary: summaryMap.get(m.id) } : m
+			)
+		);
+
+		this.#appendAssistantMessage(`Generated ${unsummarized.length} summaries.`);
+		this.#appendLog({ kind: 'info', title: `Generated ${unsummarized.length} summaries` });
+	}
+
+	// --- Message helpers ---
+
+	#appendUserMessage(content: string) {
+		this.messages = [
+			...this.messages,
+			{
+				kind: 'text',
+				id: crypto.randomUUID(),
+				role: 'user',
+				content,
+				createdAt: new Date().toISOString()
+			}
+		];
+	}
 
 	#appendAssistantMessage(content: string, error = false) {
 		this.messages = [
@@ -328,7 +480,7 @@ export class AgentChatState {
 				details: toSerializable(log.details)
 			}
 		];
-		this.logs = next.length > 300 ? next.slice(next.length - 300) : next;
+		this.logs = next.length > 300 ? next.slice(-300) : next;
 	}
 }
 

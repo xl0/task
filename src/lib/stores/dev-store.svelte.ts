@@ -1,6 +1,7 @@
 import { PersistedState } from 'runed';
 
 export type Provider = 'openrouter' | 'anthropic' | 'openai' | 'google';
+export type ModelOption = { id: string; cheap?: boolean };
 
 export const PROVIDERS: { id: Provider; label: string; placeholder: string }[] = [
 	{ id: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-v1-...' },
@@ -9,23 +10,35 @@ export const PROVIDERS: { id: Provider; label: string; placeholder: string }[] =
 	{ id: 'google', label: 'Google', placeholder: 'AIza...' }
 ];
 
-export const MODELS: Record<Provider, string[]> = {
+export const MODELS: Record<Provider, ModelOption[]> = {
 	openrouter: [
-		'anthropic/claude-sonnet-4.6',
-		'anthropic/claude-opus-4.6',
-		'openai/gpt-5.4',
-		'openai/gpt-5.4-mini',
-		'google/gemini-3.1-pro-preview',
-		'google/gemini-3-flash-preview'
+		{ id: 'anthropic/claude-sonnet-4.6' },
+		{ id: 'anthropic/claude-opus-4.6' },
+		{ id: 'openai/gpt-5.4' },
+		{ id: 'openai/gpt-5.4-mini', cheap: true },
+		{ id: 'google/gemini-3.1-pro-preview' },
+		{ id: 'google/gemini-3-flash-preview' }
 	],
-	anthropic: ['claude-sonnet-4-6-20250627', 'claude-opus-4-6-20250624'],
-	openai: ['gpt-5.4', 'gpt-5.4-mini'],
-	google: ['gemini-2.5-pro', 'gemini-2.5-flash']
+	anthropic: [
+		{ id: 'claude-haiku-4-5', cheap: true },
+		{ id: 'claude-sonnet-4-6' },
+		{ id: 'claude-opus-4-6' }
+	],
+	openai: [{ id: 'gpt-5.4' }, { id: 'gpt-5.4-mini', cheap: true }],
+	google: [{ id: 'gemini-2.5-pro' }, { id: 'gemini-2.5-flash', cheap: true }]
 };
 
+function modelIds(provider: Provider): string[] {
+	return MODELS[provider].map((model) => model.id);
+}
+
+function cheapModelId(provider: Provider): string {
+	return MODELS[provider].find((model) => model.cheap)?.id ?? MODELS[provider][0].id;
+}
+
 class DevStore {
-	#provider = new PersistedState<Provider>('dev-provider', 'openrouter');
-	#model = new PersistedState<string>('dev-model', MODELS.openrouter[0]);
+	#provider = new PersistedState<Provider>('dev-provider', 'openai');
+	#model = new PersistedState<string>('dev-model', modelIds('openai')[0]);
 	#apiKey = new PersistedState<string>('dev-api-key', '');
 
 	get provider(): Provider {
@@ -35,7 +48,7 @@ class DevStore {
 	set provider(value: Provider) {
 		this.#provider.current = value;
 		// Reset model to first available for new provider
-		const models = MODELS[value];
+		const models = modelIds(value);
 		if (!models.includes(this.#model.current)) {
 			this.#model.current = models[0];
 		}
@@ -58,7 +71,11 @@ class DevStore {
 	}
 
 	get models(): string[] {
-		return MODELS[this.provider];
+		return modelIds(this.provider);
+	}
+
+	get cheapModel(): string {
+		return cheapModelId(this.provider);
 	}
 
 	get providerConfig() {

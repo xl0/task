@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { parseRawMessages } from '$lib/data/ingest';
-	import { devStore, PROVIDERS, MODELS, type Provider } from '$lib/stores/dev-store.svelte';
+	import { parseWorkspaceSnapshot, type WorkspaceSnapshot } from '$lib/data/workspace-snapshot';
+	import { devStore, PROVIDERS, type Provider } from '$lib/stores/dev-store.svelte';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -12,11 +13,15 @@
 	import UploadIcon from '@lucide/svelte/icons/upload';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
-	let fileInput: HTMLInputElement;
+	let fileInput = $state<HTMLInputElement | null>(null);
+	let snapshotFileInput = $state<HTMLInputElement | null>(null);
 	let parsedMessages: ReturnType<typeof parseRawMessages> = $state([]);
 	let fileName = $state('');
-	let addCount = $state(0);
 	let error = $state('');
+	let parsedSnapshot: WorkspaceSnapshot | null = $state(null);
+	let snapshotFileName = $state('');
+	let snapshotError = $state('');
+	let snapshotNotice = $state('');
 
 	function handleFileSelect(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -29,7 +34,6 @@
 			try {
 				const json = JSON.parse(reader.result as string);
 				parsedMessages = parseRawMessages(json);
-				addCount = parsedMessages.length;
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Failed to parse JSON';
 				parsedMessages = [];
@@ -38,12 +42,74 @@
 		reader.readAsText(file);
 	}
 
+	function handleSnapshotFileSelect(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+
+		snapshotError = '';
+		snapshotNotice = '';
+		snapshotFileName = file.name;
+
+		const reader = new FileReader();
+		reader.onload = () => {
+			try {
+				const json = JSON.parse(reader.result as string);
+				parsedSnapshot = parseWorkspaceSnapshot(json);
+			} catch (err) {
+				snapshotError = err instanceof Error ? err.message : 'Failed to parse workspace snapshot';
+				parsedSnapshot = null;
+			}
+		};
+		reader.readAsText(file);
+	}
+
+	function saveWorkspaceSnapshot() {
+		snapshotError = '';
+		snapshotNotice = '';
+
+		try {
+			const snapshot = workspace.getSnapshot();
+			const json = JSON.stringify(snapshot, null, 2);
+			const blob = new Blob([json], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `workspace-${new Date().toISOString().replace(/[.:]/g, '-')}.json`;
+			a.click();
+			URL.revokeObjectURL(url);
+
+			snapshotNotice = `Saved workspace snapshot (${workspace.messages.length} messages).`;
+		} catch (err) {
+			snapshotError = err instanceof Error ? err.message : 'Failed to save workspace snapshot';
+		}
+	}
+
+	function loadWorkspaceSnapshot() {
+		if (!parsedSnapshot) return;
+
+		snapshotError = '';
+
+		try {
+			workspace.loadSnapshot(parsedSnapshot);
+			snapshotNotice =
+				`Loaded workspace snapshot (${parsedSnapshot.messages.length} messages, ` +
+				`${parsedSnapshot.actionables.length} actionables, ` +
+				`${parsedSnapshot.outgoingMessages.length} outgoing).`;
+
+			parsedSnapshot = null;
+			snapshotFileName = '';
+			if (snapshotFileInput) snapshotFileInput.value = '';
+		} catch (err) {
+			snapshotError = err instanceof Error ? err.message : 'Failed to load workspace snapshot';
+		}
+	}
+
 	function addMessages(count?: number) {
+		error = '';
 		const toAdd = count ? parsedMessages.slice(0, count) : parsedMessages;
 		workspace.addMessages(toAdd);
 		parsedMessages = [];
 		fileName = '';
-		addCount = 0;
 		if (fileInput) fileInput.value = '';
 	}
 
@@ -51,9 +117,13 @@
 		workspace.clear();
 		parsedMessages = [];
 		fileName = '';
-		addCount = 0;
 		error = '';
+		parsedSnapshot = null;
+		snapshotFileName = '';
+		snapshotError = '';
+		snapshotNotice = '';
 		if (fileInput) fileInput.value = '';
+		if (snapshotFileInput) snapshotFileInput.value = '';
 	}
 </script>
 
@@ -129,12 +199,12 @@
 			<!-- Import section -->
 			<div class="flex flex-col gap-3">
 				<h3 class="text-sm font-medium">Import Messages</h3>
-				<input
-					bind:this={fileInput}
+				<Input
+					bind:ref={fileInput}
 					type="file"
 					accept=".json"
 					onchange={handleFileSelect}
-					class="text-sm file:mr-2 file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-secondary-foreground"
+					class="text-sm"
 				/>
 
 				{#if error}
@@ -171,6 +241,46 @@
 							</Button>
 						{/if}
 					</div>
+				{/if}
+			</div>
+
+			<Separator />
+
+			<!-- Workspace snapshot -->
+			<div class="flex flex-col gap-3">
+				<h3 class="text-sm font-medium">Workspace Snapshot</h3>
+
+				<div class="flex gap-2">
+					<Button variant="outline" size="sm" class="h-7 text-xs" onclick={saveWorkspaceSnapshot}>
+						Save JSON
+					</Button>
+				</div>
+
+				<Input
+					bind:ref={snapshotFileInput}
+					type="file"
+					accept=".json"
+					onchange={handleSnapshotFileSelect}
+					class="text-sm"
+				/>
+
+				{#if snapshotError}
+					<p class="text-xs text-destructive">{snapshotError}</p>
+				{/if}
+
+				{#if snapshotNotice}
+					<p class="text-xs text-muted-foreground">{snapshotNotice}</p>
+				{/if}
+
+				{#if parsedSnapshot}
+					<p class="text-xs text-muted-foreground">
+						Parsed snapshot from {snapshotFileName}: {parsedSnapshot.messages.length} messages,
+						{parsedSnapshot.actionables.length} actionables,
+						{parsedSnapshot.outgoingMessages.length} outgoing
+					</p>
+					<Button size="sm" class="h-7 text-xs" onclick={loadWorkspaceSnapshot}
+						>Load snapshot</Button
+					>
 				{/if}
 			</div>
 

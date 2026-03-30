@@ -5,7 +5,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a1',
 		messageIds: ['m16', 'm9', 'm2'],
-		outgoingMessageIds: ['o1'],
 		action: 'decide',
 		title: 'Payment service: rollback vs hotfix',
 		summary:
@@ -16,7 +15,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a2',
 		messageIds: ['m19', 'm12'],
-		outgoingMessageIds: ['o2'],
 		action: 'decide',
 		title: 'Northwind deal terms changed',
 		summary:
@@ -27,7 +25,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a3',
 		messageIds: ['m1', 'm3', 'm10', 'm15', 'm18', 'm20'],
-		outgoingMessageIds: ['o3'],
 		action: 'decide',
 		title: 'Thursday scheduling conflict',
 		summary:
@@ -38,7 +35,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a4',
 		messageIds: ['m13'],
-		outgoingMessageIds: ['o4'],
 		action: 'decide',
 		title: 'Benefits package sign-off',
 		summary: 'Alex needs sign-off by Friday — provider deadline is the 21st or rate is lost.',
@@ -48,7 +44,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a5',
 		messageIds: ['m8'],
-		outgoingMessageIds: ['o5'],
 		action: 'decide',
 		title: 'VP Engineering candidate interviews',
 		summary:
@@ -61,7 +56,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a6',
 		messageIds: ['m13'],
-		outgoingMessageIds: ['o6'],
 		action: 'delegate',
 		title: 'Hybrid policy team concerns',
 		summary:
@@ -72,7 +66,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a7',
 		messageIds: ['m1', 'm10', 'm18'],
-		outgoingMessageIds: ['o7'],
 		action: 'delegate',
 		title: 'Revenue projections for Meridian',
 		summary:
@@ -85,7 +78,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a8',
 		messageIds: ['m4'],
-		outgoingMessageIds: [],
 		action: 'ignore',
 		title: 'Phishing email — seczure-verify.com',
 		summary: 'Fake security alert from spoofed domain. Delete and report.',
@@ -95,7 +87,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a9',
 		messageIds: ['m11'],
-		outgoingMessageIds: [],
 		action: 'ignore',
 		title: 'Tech Digest newsletter',
 		summary: 'Weekly AI newsletter. No action needed.',
@@ -105,7 +96,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a10',
 		messageIds: ['m5', 'm6', 'm17'],
-		outgoingMessageIds: [],
 		action: 'ignore',
 		title: 'Horizon timeline — resolved',
 		summary: 'David and Lisa aligned on revised 10-week phased timeline. No action needed.',
@@ -115,7 +105,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a11',
 		messageIds: ['m14'],
-		outgoingMessageIds: [],
 		action: 'ignore',
 		title: 'Marketing Q2 plan — FYI',
 		summary: 'Mark shared Q2 plan. No decisions needed.',
@@ -125,7 +114,6 @@ export const mockActionables: Actionable[] = [
 	{
 		id: 'a12',
 		messageIds: ['m7'],
-		outgoingMessageIds: [],
 		action: 'ignore',
 		title: 'Sunday dinner with Mum',
 		summary: 'Personal — confirm attendance, bring wine.',

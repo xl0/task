@@ -8,6 +8,7 @@ import type {
 	ActionableId,
 	OutgoingMessageId
 } from '$lib/types';
+import { createWorkspaceSnapshot, type WorkspaceSnapshot } from '$lib/data/workspace-snapshot';
 import { mockMessages } from '$lib/data/mock-messages';
 import { mockActionables } from '$lib/data/mock-actionables';
 import { mockOutgoingMessages } from '$lib/data/mock-outgoing-messages';
@@ -102,6 +103,22 @@ class WorkspaceStore {
 
 	setBriefing(briefing: DailyBriefing | null) {
 		this.#briefing.current = briefing;
+	}
+
+	getSnapshot(): WorkspaceSnapshot {
+		return createWorkspaceSnapshot({
+			messages: this.#messages.current,
+			actionables: this.#actionables.current,
+			outgoingMessages: this.#outgoingMessages.current,
+			briefing: this.#briefing.current
+		});
+	}
+
+	loadSnapshot(snapshot: WorkspaceSnapshot) {
+		this.setMessages(snapshot.messages);
+		this.setActionables(snapshot.actionables);
+		this.setOutgoingMessages(snapshot.outgoingMessages);
+		this.setBriefing(snapshot.briefing);
 	}
 
 	updateOutgoingMessage(id: OutgoingMessageId, patch: Partial<OutgoingMessage>) {

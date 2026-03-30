@@ -144,6 +144,25 @@
 		const d = new Date(iso);
 		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 	}
+
+	function messageSnippet(msg: { summary?: string; text: string }) {
+		const summary = msg.summary?.trim();
+		if (summary) return summary;
+
+		return msg.text.trim();
+	}
+
+	function actionableSnippet(act: Actionable) {
+		const summary = act.summary?.trim();
+		if (summary) return summary;
+
+		for (const id of act.messageIds) {
+			const body = workspace.getMessage(id)?.text?.trim();
+			if (body) return body;
+		}
+
+		return '';
+	}
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -221,8 +240,9 @@
 												</div>
 												<div class="flex items-center gap-2">
 													<ChannelIcon class="size-3 shrink-0 text-muted-foreground" />
-													<span class="text-xs break-words whitespace-normal text-muted-foreground"
-														>{msg.summary}</span
+													<span
+														class="line-clamp-3 text-xs break-words whitespace-normal text-muted-foreground"
+														>{messageSnippet(msg)}</span
 													>
 												</div>
 											</a>
@@ -245,9 +265,10 @@
 														>
 													{/if}
 												</div>
-												<span class="truncate text-xs text-muted-foreground">
-													To {msg.recipient ??
-														(section.id === 'drafts' ? 'recipient TBD' : 'recipient unknown')}
+												<span
+													class="line-clamp-3 text-xs break-words whitespace-normal text-muted-foreground"
+												>
+													{msg.body}
 												</span>
 											</a>
 										{:else}
@@ -270,8 +291,10 @@
 														</Badge>
 													{/if}
 												</div>
-												<span class="text-xs break-words whitespace-normal text-muted-foreground">
-													{act.summary}
+												<span
+													class="line-clamp-3 text-xs break-words whitespace-normal text-muted-foreground"
+												>
+													{actionableSnippet(act)}
 												</span>
 												{#if act.messageIds.length > 0}
 													<span class="text-xs text-muted-foreground">
