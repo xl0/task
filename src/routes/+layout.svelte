@@ -28,6 +28,7 @@
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
 	import SidebarListPane from './SidebarListPane.svelte';
 	import DevPanel from '$lib/components/DevPanel.svelte';
+	import AgentDevConsole from '$lib/components/AgentDevConsole.svelte';
 
 	let { children } = $props();
 
@@ -148,6 +149,8 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <div class="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+	<AgentDevConsole />
+
 	<div class="fixed top-3 right-3 z-50">
 		<DevPanel />
 	</div>
@@ -218,7 +221,9 @@
 												</div>
 												<div class="flex items-center gap-2">
 													<ChannelIcon class="size-3 shrink-0 text-muted-foreground" />
-													<span class="truncate text-xs text-muted-foreground">{msg.summary}</span>
+													<span class="text-xs break-words whitespace-normal text-muted-foreground"
+														>{msg.summary}</span
+													>
 												</div>
 											</a>
 										{:else if section.kind === 'outgoing'}
@@ -265,7 +270,9 @@
 														</Badge>
 													{/if}
 												</div>
-												<span class="truncate text-xs text-muted-foreground">{act.summary}</span>
+												<span class="text-xs break-words whitespace-normal text-muted-foreground">
+													{act.summary}
+												</span>
 												{#if act.messageIds.length > 0}
 													<span class="text-xs text-muted-foreground">
 														{act.messageIds.length} message{act.messageIds.length > 1 ? 's' : ''}

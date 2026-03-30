@@ -28,8 +28,7 @@
 		reader.onload = () => {
 			try {
 				const json = JSON.parse(reader.result as string);
-				const startOrder = workspace.messages.length;
-				parsedMessages = parseRawMessages(json, startOrder);
+				parsedMessages = parseRawMessages(json);
 				addCount = parsedMessages.length;
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Failed to parse JSON';
@@ -147,7 +146,7 @@
 						Parsed <strong>{parsedMessages.length}</strong> messages from {fileName}
 					</p>
 					<div class="flex gap-2">
-						<Button size="sm" class="h-7 text-xs gap-1.5" onclick={() => addMessages()}>
+						<Button size="sm" class="h-7 gap-1.5 text-xs" onclick={() => addMessages()}>
 							<UploadIcon class="size-3" />
 							Add all {parsedMessages.length}
 						</Button>
@@ -180,7 +179,7 @@
 			<!-- Workspace state -->
 			<div class="flex flex-col gap-3">
 				<h3 class="text-sm font-medium">Workspace</h3>
-				<div class="text-xs text-muted-foreground space-y-1">
+				<div class="space-y-1 text-xs text-muted-foreground">
 					<p>{workspace.messages.length} messages ({workspace.inboxCount} unread)</p>
 					<p>{workspace.outgoingMessages.length} outgoing messages</p>
 				</div>
@@ -188,7 +187,7 @@
 					<Button
 						variant="outline"
 						size="sm"
-						class="h-7 text-xs gap-1.5"
+						class="h-7 gap-1.5 text-xs"
 						onclick={() => workspace.reset()}
 					>
 						Reset workspace
@@ -196,7 +195,7 @@
 					<Button
 						variant="destructive"
 						size="sm"
-						class="h-7 text-xs gap-1.5"
+						class="h-7 gap-1.5 text-xs"
 						onclick={clearWorkspace}
 					>
 						<Trash2Icon class="size-3" />

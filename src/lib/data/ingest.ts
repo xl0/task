@@ -27,10 +27,10 @@ function truncate(body: string, len = 100): string {
 	return line.length > len ? line.slice(0, len) + '...' : line;
 }
 
-export function parseRawMessages(json: unknown, startOrder = 0): Message[] {
+export function parseRawMessages(json: unknown): Message[] {
 	if (!Array.isArray(json)) throw new Error('Expected a JSON array of messages');
 
-	return json.map((r: RawMessage, i: number) => ({
+	return json.map((r: RawMessage) => ({
 		id: `m${r.id}` as MessageId,
 		channel: r.channel,
 		senderName: parseSenderName(r.from),
@@ -39,7 +39,6 @@ export function parseRawMessages(json: unknown, startOrder = 0): Message[] {
 		receivedAt: r.timestamp,
 		summary: r.subject ?? truncate(r.body),
 		text: r.body,
-		read: false,
-		order: startOrder + i
+		read: false
 	}));
 }

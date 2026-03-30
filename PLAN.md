@@ -33,10 +33,9 @@ type Message = {
 	subject?: string;
 	channelName?: string;
 	receivedAt: string;
-	summary: string;
+	summary?: string;
 	text: string;
-	read: boolean;
-	order: number;
+	read?: boolean;
 };
 
 type Actionable = {
@@ -105,24 +104,27 @@ type DailyBriefing = {
   - Outgoing messages support `channelName` for Slack channel display
 - Drafts/Sent list panes wired to outgoing messages
 - Draft editor route (`/drafts/o{id}`) and sent detail route (`/sent/o{id}`)
-- Daily brief shown as default detail for all sections (inbox, drafts, sent, decide, delegate, ignore)
+- Daily briefing + agent chat shown as a stacked single-scroll default detail for all sections (inbox, drafts, sent, decide, delegate, ignore)
 - Clicking open nav section toggles it closed (navigates to `/`)
+- Workspace toolset implemented (`get_*`, `insert_*`, `update_*`) with valibot schemas and paging (`limit`/`offset` + `total`), including constrained update fields + automatic timestamp handling
+- Agent chat harness wired to provider/model/API key from dev panel and can execute workspace tools
+- Quake-style dev console (`~`) logs LLM steps + tool calls/results with expandable details
 
 ### Next
 
 - Agent loop implementation (LLM-powered triage)
-- Wire agent loop runtime to dev panel AI config (provider/model/api key)
+- Tighten agent system prompt and loop behavior for reliable inbox triage
 - OutgoingMessage generation/refresh from agent loop (instead of static mocks)
 - Daily briefing generation/refresh from agent loop (instead of static mock)
 - Send flow from draft editor (mark sent + move to Sent)
 
 ### Agent Tooling Todo
 
-- Define canonical tool contracts for `get_*` and `upsert_*` (minimal `get_*` filters, optional `id` for single fetch, paged list reads with `limit`/`offset` + `total`) ✅
+- Define canonical tool contracts for `get_*`, `insert_*`, and `update_*` (minimal `get_*` filters, paged list reads with `limit`/`offset` + `total`) ✅
 - Add runtime tool handlers over `workspace` store ✅
-- Implement `upsert_*` semantics (partial update by `id`, create when missing `id`, return `{ id }` on create) ✅
-- Validate tool inputs with strict schemas and clear error messages
-- Add a first agent loop pass that reads with `get_*` and writes via `upsert_*`
+- Implement explicit insert/update semantics (`insert_*` for create, `update_*` for partial update by `id`) ✅
+- Validate tool inputs with strict schemas and clear error messages ✅
+- Add a first agent loop pass that reads with `get_*` and writes via `insert_*`/`update_*` ✅ (chat harness)
 - Add smoke tests to verify tool behavior on create, update, and relation preservation
 
 ## Notes / MVP Tradeoffs

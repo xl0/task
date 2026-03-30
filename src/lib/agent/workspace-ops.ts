@@ -2,7 +2,6 @@ import { workspace } from '$lib/stores/workspace.svelte';
 import type {
 	Actionable,
 	ActionableId,
-	DailyBriefing,
 	Message,
 	MessageId,
 	OutgoingMessage,
@@ -15,6 +14,14 @@ type Page<T> = {
 	limit: number;
 	offset: number;
 };
+
+type MessageUpdatePatch = {
+	summary?: Message['summary'];
+	read?: Message['read'];
+};
+
+type OutgoingInsertInput = Omit<OutgoingMessage, 'id' | 'createdAt'>;
+type OutgoingUpdatePatch = Partial<Omit<OutgoingMessage, 'id' | 'createdAt'>>;
 
 function paginate<T>(items: T[], limit: number, offset: number): Page<T> {
 	const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
@@ -59,6 +66,40 @@ function assertRequired<T extends object>(
 	}
 }
 
+function assertHasUpdateFields(input: Record<string, unknown>, entityName: string) {
+	const hasField = Object.values(input).some((value) => value !== undefined);
+	if (!hasField) {
+		throw new Error(
+			`No fields provided to update ${entityName}. Provide at least one field to update.`
+		);
+	}
+}
+
+function assertExistingIds(
+	ids: string[],
+	existingIds: Set<string>,
+	fieldName: string,
+	entityName: string
+) {
+	const missing = ids.filter((id) => !existingIds.has(id));
+	if (missing.length > 0) {
+		throw new Error(
+			`Invalid ${entityName} ${fieldName}: ${missing.join(', ')} not found in workspace.`
+		);
+	}
+}
+
+function assertExistingId(
+	id: string,
+	existingIds: Set<string>,
+	fieldName: string,
+	entityName: string
+) {
+	if (!existingIds.has(id)) {
+		throw new Error(`Invalid ${entityName} ${fieldName}: ${id} not found in workspace.`);
+	}
+}
+
 export function listMessages(limit = 100, offset = 0) {
 	return paginate(workspace.messages, limit, offset);
 }
@@ -71,29 +112,22 @@ export function listOutgoingMessages(limit = 100, offset = 0) {
 	return paginate(workspace.outgoingMessages, limit, offset);
 }
 
-export function upsertMessage(input: { id?: MessageId } & Partial<Omit<Message, 'id'>>) {
-	if (input.id) {
-		const index = workspace.messages.findIndex((item) => item.id === input.id);
-		if (index === -1) {
-			throw new Error(`Message ${input.id} not found`);
-		}
-
-		const messages = [...workspace.messages];
-		messages[index] = mergeDefined(messages[index], input);
-		workspace.setMessages(messages);
-		return { id: messages[index].id, created: false as const };
-	}
-
+export function insertMessage(input: Omit<Message, 'id'>) {
 	const required: Array<keyof Omit<Message, 'id'>> = [
 		'channel',
 		'senderName',
 		'receivedAt',
-		'summary',
-		'text',
-		'read',
-		'order'
+		'text'
 	];
 	assertRequired(input, required, 'message');
+
+	const derivedSummary =
+		input.summary ??
+		input.subject ??
+		input.text
+			.split('\n')
+			.find((line) => line.trim().length > 0)
+			?.trim();
 
 	const id = nextId(
 		'm',
@@ -106,29 +140,50 @@ export function upsertMessage(input: { id?: MessageId } & Partial<Omit<Message, 
 		subject: input.subject,
 		channelName: input.channelName,
 		receivedAt: input.receivedAt!,
-		summary: input.summary!,
+		summary: derivedSummary,
 		text: input.text!,
-		read: input.read!,
-		order: input.order!
+		read: input.read ?? false
 	};
 
 	workspace.setMessages([...workspace.messages, created]);
-	return { id, created: true as const };
+	return { id };
 }
 
-export function upsertActionable(input: { id?: ActionableId } & Partial<Omit<Actionable, 'id'>>) {
-	if (input.id) {
-		const index = workspace.actionables.findIndex((item) => item.id === input.id);
-		if (index === -1) {
-			throw new Error(`Actionable ${input.id} not found`);
-		}
+export function updateMessage(id: MessageId, patch: MessageUpdatePatch) {
+	assertHasUpdateFields(patch as Record<string, unknown>, 'message');
 
-		const actionables = [...workspace.actionables];
-		actionables[index] = mergeDefined(actionables[index], input);
-		workspace.setActionables(actionables);
-		return { id: actionables[index].id, created: false as const };
+	const index = workspace.messages.findIndex((item) => item.id === id);
+	if (index === -1) {
+		throw new Error(`Message ${id} not found`);
 	}
 
+	const messages = [...workspace.messages];
+	messages[index] = mergeDefined(messages[index], patch as Partial<Message>);
+	workspace.setMessages(messages);
+	return { id: messages[index].id };
+}
+
+function validateActionableReferences(input: Partial<Omit<Actionable, 'id'>>) {
+	if (input.messageIds) {
+		assertExistingIds(
+			input.messageIds,
+			new Set(workspace.messages.map((message) => message.id)),
+			'messageIds',
+			'actionable'
+		);
+	}
+
+	if (input.outgoingMessageIds) {
+		assertExistingIds(
+			input.outgoingMessageIds,
+			new Set(workspace.outgoingMessages.map((message) => message.id)),
+			'outgoingMessageIds',
+			'actionable'
+		);
+	}
+}
+
+export function insertActionable(input: Omit<Actionable, 'id'>) {
 	const required: Array<keyof Omit<Actionable, 'id'>> = [
 		'messageIds',
 		'outgoingMessageIds',
@@ -139,6 +194,7 @@ export function upsertActionable(input: { id?: ActionableId } & Partial<Omit<Act
 		'status'
 	];
 	assertRequired(input, required, 'actionable');
+	validateActionableReferences(input);
 
 	const id = nextId(
 		'a',
@@ -146,36 +202,58 @@ export function upsertActionable(input: { id?: ActionableId } & Partial<Omit<Act
 	) as ActionableId;
 	const created: Actionable = {
 		id,
-		messageIds: input.messageIds!,
-		outgoingMessageIds: input.outgoingMessageIds!,
-		action: input.action!,
-		title: input.title!,
-		summary: input.summary!,
-		priority: input.priority!,
-		status: input.status!
+		messageIds: input.messageIds,
+		outgoingMessageIds: input.outgoingMessageIds,
+		action: input.action,
+		title: input.title,
+		summary: input.summary,
+		priority: input.priority,
+		status: input.status
 	};
 
 	workspace.setActionables([...workspace.actionables, created]);
-	return { id, created: true as const };
+	return { id };
 }
 
-export function upsertOutgoingMessage(
-	input: { id?: OutgoingMessageId } & Partial<Omit<OutgoingMessage, 'id'>>
-) {
-	if (input.id) {
-		const index = workspace.outgoingMessages.findIndex((item) => item.id === input.id);
-		if (index === -1) {
-			throw new Error(`Outgoing message ${input.id} not found`);
-		}
+export function updateActionable(id: ActionableId, patch: Partial<Omit<Actionable, 'id'>>) {
+	assertHasUpdateFields(patch as Record<string, unknown>, 'actionable');
+	validateActionableReferences(patch);
 
-		const outgoingMessages = [...workspace.outgoingMessages];
-		outgoingMessages[index] = mergeDefined(outgoingMessages[index], input);
-		workspace.setOutgoingMessages(outgoingMessages);
-		return { id: outgoingMessages[index].id, created: false as const };
+	const index = workspace.actionables.findIndex((item) => item.id === id);
+	if (index === -1) {
+		throw new Error(`Actionable ${id} not found`);
 	}
 
-	const required: Array<keyof Omit<OutgoingMessage, 'id'>> = ['body', 'sent'];
+	const actionables = [...workspace.actionables];
+	actionables[index] = mergeDefined(actionables[index], patch as Partial<Actionable>);
+	workspace.setActionables(actionables);
+	return { id: actionables[index].id };
+}
+
+function validateOutgoingReferences(input: OutgoingUpdatePatch | Partial<OutgoingInsertInput>) {
+	if (input.parentMessageId) {
+		assertExistingId(
+			input.parentMessageId,
+			new Set(workspace.messages.map((message) => message.id)),
+			'parentMessageId',
+			'outgoing message'
+		);
+	}
+
+	if (input.parentActionableId) {
+		assertExistingId(
+			input.parentActionableId,
+			new Set(workspace.actionables.map((actionable) => actionable.id)),
+			'parentActionableId',
+			'outgoing message'
+		);
+	}
+}
+
+export function insertOutgoingMessage(input: OutgoingInsertInput) {
+	const required: Array<keyof OutgoingInsertInput> = ['body', 'sent'];
 	assertRequired(input, required, 'outgoing message');
+	validateOutgoingReferences(input);
 
 	const id = nextId(
 		'o',
@@ -189,30 +267,52 @@ export function upsertOutgoingMessage(
 		subject: input.subject,
 		channel: input.channel,
 		channelName: input.channelName,
-		body: input.body!,
-		createdAt: input.createdAt,
-		sent: input.sent!
+		body: input.body,
+		createdAt: new Date().toISOString(),
+		sent: input.sent
 	};
 
 	workspace.setOutgoingMessages([...workspace.outgoingMessages, created]);
-	return { id, created: true as const };
+	return { id };
 }
 
-export function upsertBriefing(input: Partial<DailyBriefing>) {
-	if (!workspace.briefing) {
-		assertRequired(input, ['generatedAt', 'markdown'], 'briefing');
-		workspace.setBriefing({ generatedAt: input.generatedAt!, markdown: input.markdown! });
-		return { updated: true as const };
+export function updateOutgoingMessage(id: OutgoingMessageId, patch: OutgoingUpdatePatch) {
+	assertHasUpdateFields(patch as Record<string, unknown>, 'outgoing message');
+
+	const index = workspace.outgoingMessages.findIndex((item) => item.id === id);
+	if (index === -1) {
+		throw new Error(`Outgoing message ${id} not found`);
 	}
 
-	const hasAnyField = input.generatedAt !== undefined || input.markdown !== undefined;
-	if (!hasAnyField) {
-		throw new Error('No fields provided for briefing upsert');
+	const existing = workspace.outgoingMessages[index];
+	if (existing.sent) {
+		throw new Error(`Outgoing message ${id} is already sent and cannot be edited.`);
+	}
+
+	validateOutgoingReferences(patch);
+
+	const outgoingMessages = [...workspace.outgoingMessages];
+	outgoingMessages[index] = mergeDefined(
+		outgoingMessages[index],
+		patch as Partial<OutgoingMessage>
+	);
+
+	if (patch.sent === true) {
+		outgoingMessages[index].createdAt = new Date().toISOString();
+	}
+
+	workspace.setOutgoingMessages(outgoingMessages);
+	return { id: outgoingMessages[index].id };
+}
+
+export function updateBriefing(markdown: string) {
+	if (markdown.trim().length === 0) {
+		throw new Error('Briefing markdown cannot be empty.');
 	}
 
 	workspace.setBriefing({
-		generatedAt: input.generatedAt ?? workspace.briefing.generatedAt,
-		markdown: input.markdown ?? workspace.briefing.markdown
+		generatedAt: new Date().toISOString(),
+		markdown
 	});
 
 	return { updated: true as const };

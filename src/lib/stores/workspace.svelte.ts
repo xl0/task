@@ -22,6 +22,10 @@ class WorkspaceStore {
 	);
 	#briefing = new PersistedState<DailyBriefing | null>('workspace:briefing', mockDailyBriefing);
 
+	constructor() {
+		this.#messages.current = this.#sortMessagesById(this.#messages.current);
+	}
+
 	get messages() {
 		return this.#messages.current;
 	}
@@ -81,11 +85,11 @@ class WorkspaceStore {
 	}
 
 	addMessages(messages: Message[]) {
-		this.#messages.current = [...this.#messages.current, ...messages];
+		this.#messages.current = this.#sortMessagesById([...this.#messages.current, ...messages]);
 	}
 
 	setMessages(messages: Message[]) {
-		this.#messages.current = messages;
+		this.#messages.current = this.#sortMessagesById(messages);
 	}
 
 	setActionables(actionables: Actionable[]) {
@@ -119,7 +123,7 @@ class WorkspaceStore {
 	}
 
 	reset() {
-		this.#messages.current = mockMessages;
+		this.#messages.current = this.#sortMessagesById(mockMessages);
 		this.#actionables.current = mockActionables;
 		this.#outgoingMessages.current = mockOutgoingMessages;
 		this.#briefing.current = mockDailyBriefing;
@@ -130,6 +134,14 @@ class WorkspaceStore {
 		this.#actionables.current = [];
 		this.#outgoingMessages.current = [];
 		this.#briefing.current = null;
+	}
+
+	#sortMessagesById(messages: Message[]) {
+		return [...messages].sort((a, b) => this.#messageIdNumber(a.id) - this.#messageIdNumber(b.id));
+	}
+
+	#messageIdNumber(id: MessageId) {
+		return Number.parseInt(id.slice(1), 10);
 	}
 }
 

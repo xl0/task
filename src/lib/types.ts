@@ -11,10 +11,9 @@ export type Message = {
 	subject?: string;
 	channelName?: string;
 	receivedAt: string;
-	summary: string;
+	summary?: string;
 	text: string;
-	read: boolean;
-	order: number;
+	read?: boolean;
 };
 
 export type Actionable = {
@@ -45,5 +44,3 @@ export type DailyBriefing = {
 	generatedAt: string;
 	markdown: string;
 };
-
-export type MailboxView = 'inbox' | 'drafts' | 'sent';
