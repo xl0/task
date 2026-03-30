@@ -18,11 +18,7 @@ import type { ActionableId, MessageId, OutgoingMessageId } from '$lib/types';
 
 // Shared field schemas
 const messageId = v.pipe(v.string(), v.regex(/^m\d+$/), v.description('Message id, e.g. m12'));
-const actionableId = v.pipe(
-	v.string(),
-	v.regex(/^a\d+$/),
-	v.description('Actionable id, e.g. a4')
-);
+const actionableId = v.pipe(v.string(), v.regex(/^a\d+$/), v.description('Actionable id, e.g. a4'));
 const outgoingMessageId = v.pipe(
 	v.string(),
 	v.regex(/^o\d+$/),
@@ -58,8 +54,7 @@ export const workspaceTools = {
 	get_messages: tool({
 		description: 'List messages with optional pagination (default: limit=100, offset=0).',
 		inputSchema: valibotSchema(v.object(paginationFields)),
-		execute: async ({ limit, offset }) =>
-			toPlain(listMessages(limit ?? 100, offset ?? 0))
+		execute: async ({ limit, offset }) => toPlain(listMessages(limit ?? 100, offset ?? 0))
 	}),
 
 	get_message: tool({
@@ -90,8 +85,7 @@ export const workspaceTools = {
 	get_outgoing_messages: tool({
 		description: 'List outgoing messages with optional pagination (default: limit=100, offset=0).',
 		inputSchema: valibotSchema(v.object(paginationFields)),
-		execute: async ({ limit, offset }) =>
-			toPlain(listOutgoingMessages(limit ?? 100, offset ?? 0))
+		execute: async ({ limit, offset }) => toPlain(listOutgoingMessages(limit ?? 100, offset ?? 0))
 	}),
 
 	get_outgoing_message: tool({
@@ -123,9 +117,7 @@ export const workspaceTools = {
 					v.pipe(v.string(), v.description('Override summary; otherwise derived.'))
 				),
 				text: v.pipe(v.string(), v.description('Full message body.')),
-				read: v.optional(
-					v.pipe(v.boolean(), v.description('Initial read state. Default: false.'))
-				)
+				read: v.optional(v.pipe(v.boolean(), v.description('Initial read state. Default: false.')))
 			})
 		),
 		execute: async (input) => ({ id: insertMessage(input).id })
@@ -146,7 +138,8 @@ export const workspaceTools = {
 	}),
 
 	insert_actionable: tool({
-		description: 'Insert a new actionable. Returns { id }.',
+		description:
+			'Insert a triage decision record linked to source messages. Actionables are the canonical classification layer over inbound messages. Returns { id }.',
 		inputSchema: valibotSchema(
 			v.object({
 				messageIds: v.pipe(
@@ -187,7 +180,8 @@ export const workspaceTools = {
 	}),
 
 	insert_outgoing_message: tool({
-		description: 'Insert an outgoing message (draft or sent). Timestamp auto-set. Returns { id }.',
+		description:
+			'Insert an outgoing draft/sent message. Outgoing messages represent responses/handoffs and should usually reference a parent actionable; parentMessageId is optional for direct thread replies. Timestamp auto-set. Returns { id }.',
 		inputSchema: valibotSchema(
 			v.object({
 				parentActionableId: v.optional(actionableId),
@@ -236,7 +230,8 @@ export const workspaceTools = {
 	}),
 
 	update_briefing: tool({
-		description: 'Replace daily briefing markdown. Timestamp auto-set.',
+		description:
+			'Replace CEO daily briefing markdown. Briefing should synthesize current messages, actionables, and outgoing drafts/sends into a concise decision-oriented view. Timestamp auto-set.',
 		inputSchema: valibotSchema(
 			v.object({
 				markdown: v.pipe(v.string(), v.description('Full briefing markdown.'))

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
-	import { parseRawMessages } from '$lib/data/ingest';
+	import { parseRawMessages, assertNoExistingMessageIds } from '$lib/data/ingest';
 	import { parseWorkspaceSnapshot, type WorkspaceSnapshot } from '$lib/data/workspace-snapshot';
 	import { devStore, PROVIDERS, type Provider } from '$lib/stores/dev-store.svelte';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
@@ -33,7 +33,12 @@
 		reader.onload = () => {
 			try {
 				const json = JSON.parse(reader.result as string);
-				parsedMessages = parseRawMessages(json);
+				const messages = parseRawMessages(json);
+				assertNoExistingMessageIds(
+					messages,
+					workspace.messages.map((message) => message.id)
+				);
+				parsedMessages = messages;
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Failed to parse JSON';
 				parsedMessages = [];

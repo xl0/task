@@ -9,12 +9,23 @@
 
 	let prompt = $state('');
 	let endEl: HTMLDivElement;
+	let seenMessageCount = $state(0);
+	let hasHydratedMessageCount = $state(false);
 
 	const canSend = $derived(prompt.trim().length > 0 && !agentChat.isLoading);
 
 	$effect(() => {
-		agentChat.messages.length;
-		agentChat.isLoading;
+		const messageCount = agentChat.messages.length;
+
+		if (!hasHydratedMessageCount) {
+			seenMessageCount = messageCount;
+			hasHydratedMessageCount = true;
+			return;
+		}
+
+		const shouldScroll = messageCount > seenMessageCount;
+		seenMessageCount = messageCount;
+		if (!shouldScroll) return;
 
 		queueMicrotask(() => {
 			endEl?.scrollIntoView({ behavior: 'smooth', block: 'end' });

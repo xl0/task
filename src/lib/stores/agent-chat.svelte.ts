@@ -20,32 +20,52 @@ Your current workspace state has been pre-loaded via tool results below — use 
 
 Use workspace tools to create/update actionables, draft outgoing messages, and generate a daily briefing.`;
 
-const AGENT_LOOP_PROMPT = `Process the inbox and produce triage artifacts.
+const AGENT_LOOP_PROMPT = `Process the inbox and produce triage artifacts aligned with the Developer Brief.
+
+Data model contract (must hold at the end):
+- Messages are raw inbound communications (email/slack/whatsapp).
+- Actionables are your triage decisions over one or more messages.
+  - action = ignore | delegate | decide
+  - messageIds = all source messages that justify that decision
+- Outgoing messages are drafted/sent responses and handoffs.
+  - Most outgoings should be tied to an actionable via parentActionableId.
+  - Use parentMessageId when replying to a specific inbound message/thread.
+- Briefing is the CEO-facing synthesis of the current state, not a message dump.
 
 Requirements:
-1) Classify every message exactly once as ignore, delegate, or decide.
-2) Catch traps and context changes — later messages may override or update earlier ones.
-3) Pay attention to scheduling: identify time-sensitive items, deadlines, and meeting conflicts across messages. Group related messages into the same actionable when they concern the same topic or event.
-4) Delegate items must name a specific person from message context (no generic owner).
-5) Draft responses must match channel tone:
+1) Classify every message exactly once through actionables (no uncovered message ids).
+2) Group related messages into one actionable when they are about the same topic/event.
+3) Catch traps and context changes; later messages can override earlier assumptions.
+4) Detect scheduling risk: deadlines, meeting conflicts, and urgent time windows.
+5) Delegate items must name a specific person from context (no generic owner).
+6) Draft responses must match channel tone and be concise:
    - email: professional and structured
    - slack: concise and direct
    - whatsapp: conversational
 
-Execution:
-- Create actionables with insert_actionable. Every message id must appear in at least one actionable's messageIds.
-  - actionable.summary must explain the classification rationale and recommended next step.
-- For delegate/decide actionables, create drafts with insert_outgoing_message (sent=false, parentActionableId set, parentMessageId when replying to a specific message).
-- Update existing actionables/drafts when the pre-loaded state already has relevant ones — don't duplicate.
-- Ignore actionables can omit drafts when no reply is needed.
-- Ignore spam and phishing emails.
-- Write daily briefing (update_briefing) with these sections:
-  ## Top Decisions
-  ## Delegations
-  ## Risks & Flags
-  Include concrete recommendations. Do not include raw message ids.
+Ground rules:
+- Ignore spam and phishing.
+- Be conservative with priority.
+- Update existing actionables/outgoings when appropriate; do not duplicate parallel records.
 
-Before finishing, verify no message is left unclassified`;
+Execution:
+- Create/update actionables so every message id is represented.
+- actionable.summary must explain why the classification is correct and what should happen next.
+- For delegate/decide actionables, create/update drafts with insert_outgoing_message/update_outgoing_message
+  (sent=false, parentActionableId set, parentMessageId when relevant).
+- Ignore actionables can omit outgoing drafts when no response is needed.
+- Write the daily briefing with update_briefing:
+  - one page / under 2 minutes to read
+  - concrete recommendations and notable risks
+  - no raw message ids
+  - optional links to actionables are allowed: /decide/a123, /delegate/a123, /ignore/a123
+
+Before finishing, verify consistency:
+- no message left unclassified
+- no contradictory actionables for the same message cluster
+- outgoing links point to valid parent records
+- briefing matches the latest actionable state
+`;
 
 // --- Summary generation ---
 
