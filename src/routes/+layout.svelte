@@ -7,7 +7,14 @@
 	import { Accordion } from 'bits-ui';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { workspace } from '$lib/stores/workspace.svelte';
-	import type { Actionable, ActionableId, Channel, MessageId, OutgoingMessage, OutgoingMessageId } from '$lib/types';
+	import type {
+		Actionable,
+		ActionableId,
+		Channel,
+		MessageId,
+		OutgoingMessage,
+		OutgoingMessageId
+	} from '$lib/types';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import InboxIcon from '@lucide/svelte/icons/inbox';
@@ -82,36 +89,54 @@
 
 	const navSections: NavSection[] = [
 		{
-			id: 'inbox', label: 'Inbox', icon: InboxIcon, kind: 'inbox',
+			id: 'inbox',
+			label: 'Inbox',
+			icon: InboxIcon,
+			kind: 'inbox',
 			items: () => workspace.messages,
-			count: () => workspace.inboxCount,
+			count: () => workspace.inboxCount
 		},
 		{
-			id: 'drafts', label: 'Drafts', icon: FileEditIcon, kind: 'outgoing',
+			id: 'drafts',
+			label: 'Drafts',
+			icon: FileEditIcon,
+			kind: 'outgoing',
 			items: () => draftMessages,
-			count: () => draftMessages.length,
+			count: () => draftMessages.length
 		},
 		{
-			id: 'sent', label: 'Sent', icon: SendIcon, kind: 'outgoing',
+			id: 'sent',
+			label: 'Sent',
+			icon: SendIcon,
+			kind: 'outgoing',
 			items: () => sentMessages,
-			count: () => sentMessages.length,
+			count: () => sentMessages.length
 		},
 		{
-			id: 'decide', label: 'Decide', icon: GavelIcon, kind: 'actionable',
+			id: 'decide',
+			label: 'Decide',
+			icon: GavelIcon,
+			kind: 'actionable',
 			items: () => decideActionables,
 			count: () => decideActionables.filter((a) => a.status === 'open').length,
-			heading: 'Actionables',
+			heading: 'Actionables'
 		},
 		{
-			id: 'delegate', label: 'Delegate', icon: ForwardIcon, kind: 'actionable',
+			id: 'delegate',
+			label: 'Delegate',
+			icon: ForwardIcon,
+			kind: 'actionable',
 			items: () => delegateActionables,
-			count: () => delegateActionables.filter((a) => a.status === 'open').length,
+			count: () => delegateActionables.filter((a) => a.status === 'open').length
 		},
 		{
-			id: 'ignore', label: 'Ignore', icon: EyeOffIcon, kind: 'actionable',
+			id: 'ignore',
+			label: 'Ignore',
+			icon: EyeOffIcon,
+			kind: 'actionable',
 			items: () => ignoreActionables,
-			count: () => ignoreActionables.length,
-		},
+			count: () => ignoreActionables.length
+		}
 	];
 
 	function formatTime(iso: string): string {
@@ -123,12 +148,16 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <div class="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+	<div class="fixed top-3 right-3 z-50">
+		<DevPanel />
+	</div>
+
 	<Resizable.PaneGroup direction="horizontal" autoSaveId="layout:main">
 		<Resizable.Pane defaultSize={36} minSize={18} maxSize={55}>
 			<div class="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
-				<div class="flex items-center justify-between px-4 py-3">
-					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline">Innate</a>
-					<DevPanel />
+				<div class="flex items-center px-4 py-3">
+					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline">Innate</a
+					>
 				</div>
 				<Separator />
 				<Accordion.Root
@@ -142,7 +171,10 @@
 								{section.heading}
 							</div>
 						{/if}
-						<Accordion.Item value={section.id} class="flex min-h-0 flex-col border-b border-border/50 data-[state=open]:flex-1">
+						<Accordion.Item
+							value={section.id}
+							class="flex min-h-0 flex-col border-b border-border/50 data-[state=open]:flex-1"
+						>
 							<Accordion.Header>
 								<Accordion.Trigger
 									onclick={() => goto(resolve(openSection === section.id ? '/' : `/${section.id}`))}
@@ -151,7 +183,8 @@
 									<section.icon class="size-4 shrink-0" />
 									<span class="flex-1">{section.label}</span>
 									{#if section.count() > 0}
-										<span class="text-xs text-muted-foreground tabular-nums">{section.count()}</span>
+										<span class="text-xs text-muted-foreground tabular-nums">{section.count()}</span
+										>
 									{/if}
 								</Accordion.Trigger>
 							</Accordion.Header>
@@ -172,10 +205,16 @@
 													{#if !msg.read}
 														<span class="size-1.5 shrink-0 rounded-full bg-foreground"></span>
 													{/if}
-													<span class="flex-1 truncate text-sm {!msg.read ? 'font-semibold' : 'font-normal'}">
+													<span
+														class="flex-1 truncate text-sm {!msg.read
+															? 'font-semibold'
+															: 'font-normal'}"
+													>
 														{msg.senderName}
 													</span>
-													<span class="shrink-0 text-xs text-muted-foreground">{formatTime(msg.receivedAt)}</span>
+													<span class="shrink-0 text-xs text-muted-foreground"
+														>{formatTime(msg.receivedAt)}</span
+													>
 												</div>
 												<div class="flex items-center gap-2">
 													<ChannelIcon class="size-3 shrink-0 text-muted-foreground" />
@@ -192,14 +231,18 @@
 											>
 												<div class="flex items-center gap-2">
 													<span class="flex-1 truncate text-sm font-medium">
-														{msg.subject ?? (section.id === 'drafts' ? 'Draft message' : 'Sent message')}
+														{msg.subject ??
+															(section.id === 'drafts' ? 'Draft message' : 'Sent message')}
 													</span>
 													{#if msg.createdAt}
-														<span class="shrink-0 text-xs text-muted-foreground">{formatTime(msg.createdAt)}</span>
+														<span class="shrink-0 text-xs text-muted-foreground"
+															>{formatTime(msg.createdAt)}</span
+														>
 													{/if}
 												</div>
 												<span class="truncate text-xs text-muted-foreground">
-													To {msg.recipient ?? (section.id === 'drafts' ? 'recipient TBD' : 'recipient unknown')}
+													To {msg.recipient ??
+														(section.id === 'drafts' ? 'recipient TBD' : 'recipient unknown')}
 												</span>
 											</a>
 										{:else}

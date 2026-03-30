@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { parseRawMessages } from '$lib/data/ingest';
+	import { devStore, PROVIDERS, MODELS, type Provider } from '$lib/stores/dev-store.svelte';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import WrenchIcon from '@lucide/svelte/icons/wrench';
 	import UploadIcon from '@lucide/svelte/icons/upload';
@@ -67,6 +71,62 @@
 		</Sheet.Header>
 
 		<div class="flex flex-col gap-4 px-4">
+			<!-- AI Config -->
+			<div class="flex flex-col gap-3">
+				<h3 class="text-sm font-medium">AI Provider</h3>
+
+				<div class="flex flex-col gap-2">
+					<Label class="text-xs">Provider</Label>
+					<Select.Root
+						type="single"
+						value={devStore.provider}
+						onValueChange={(v) => {
+							if (v) devStore.provider = v as Provider;
+						}}
+					>
+						<Select.Trigger class="h-8 text-xs">{devStore.providerConfig.label}</Select.Trigger>
+						<Select.Content>
+							{#each PROVIDERS as p (p.id)}
+								<Select.Item value={p.id} label={p.label}>{p.label}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<Label class="text-xs">Model</Label>
+					<Select.Root
+						type="single"
+						value={devStore.model}
+						onValueChange={(v) => {
+							if (v) devStore.model = v;
+						}}
+					>
+						<Select.Trigger class="h-8 text-xs">{devStore.model}</Select.Trigger>
+						<Select.Content>
+							{#each devStore.models as model (model)}
+								<Select.Item value={model} label={model}>{model}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<Label class="text-xs">API Key</Label>
+					<Input
+						type="text"
+						class="h-8 text-xs"
+						placeholder={devStore.providerConfig.placeholder}
+						value={devStore.apiKey}
+						oninput={(e) => {
+							devStore.apiKey = e.currentTarget.value;
+						}}
+					/>
+				</div>
+			</div>
+
+			<Separator />
+
 			<!-- Import section -->
 			<div class="flex flex-col gap-3">
 				<h3 class="text-sm font-medium">Import Messages</h3>

@@ -84,6 +84,22 @@ class WorkspaceStore {
 		this.#messages.current = [...this.#messages.current, ...messages];
 	}
 
+	setMessages(messages: Message[]) {
+		this.#messages.current = messages;
+	}
+
+	setActionables(actionables: Actionable[]) {
+		this.#actionables.current = actionables;
+	}
+
+	setOutgoingMessages(outgoingMessages: OutgoingMessage[]) {
+		this.#outgoingMessages.current = outgoingMessages;
+	}
+
+	setBriefing(briefing: DailyBriefing | null) {
+		this.#briefing.current = briefing;
+	}
+
 	updateOutgoingMessage(id: OutgoingMessageId, patch: Partial<OutgoingMessage>) {
 		const msg = this.#outgoingMessages.current.find((m) => m.id === id);
 		if (!msg) return;

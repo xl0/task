@@ -96,6 +96,7 @@ type DailyBriefing = {
 - Workspace store with persisted messages, actionables, outgoingMessages, briefing; reset + clear
 - Mock data: 20 messages + 12 actionables + 7 outgoing messages (draft + sent) + markdown daily briefing
 - Dev panel: import raw JSON, reset workspace (restore mocks), clear workspace
+- Dev panel AI config: provider/model/API key controls persisted in browser storage
 - Mark read/unread, mark all unread
 - Actionable detail: two-pane view with summary (left) + unified timeline of related messages and replies (right)
   - Incoming messages in accordion with keyboard nav (arrow keys)
@@ -110,9 +111,19 @@ type DailyBriefing = {
 ### Next
 
 - Agent loop implementation (LLM-powered triage)
+- Wire agent loop runtime to dev panel AI config (provider/model/api key)
 - OutgoingMessage generation/refresh from agent loop (instead of static mocks)
 - Daily briefing generation/refresh from agent loop (instead of static mock)
 - Send flow from draft editor (mark sent + move to Sent)
+
+### Agent Tooling Todo
+
+- Define canonical tool contracts for `get_*` and `upsert_*` (minimal `get_*` filters, optional `id` for single fetch, paged list reads with `limit`/`offset` + `total`) ✅
+- Add runtime tool handlers over `workspace` store ✅
+- Implement `upsert_*` semantics (partial update by `id`, create when missing `id`, return `{ id }` on create) ✅
+- Validate tool inputs with strict schemas and clear error messages
+- Add a first agent loop pass that reads with `get_*` and writes via `upsert_*`
+- Add smoke tests to verify tool behavior on create, update, and relation preservation
 
 ## Notes / MVP Tradeoffs
 
