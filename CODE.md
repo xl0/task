@@ -22,9 +22,9 @@
 
 ### Routing
 
-Path-based navigation. `/` redirects to `/inbox`.
+Path-based navigation. `/` opens the same default detail as inbox (daily brief when available).
 
-- `src/routes/+layout.svelte` — Three-column shell: nav sidebar + route-selected list-pane components + detail pane (all resizable via PaneForge).
+- `src/routes/+layout.svelte` — Two-pane shell: merged left nav+list (expand active section) and right detail pane, resizable via PaneForge.
 - `src/routes/inbox/+page.svelte` — Shows daily brief when no inbox message is selected.
 - `src/routes/inbox/[id]/+page.svelte` — Message detail. Auto-marks read via `$effect` + `untrack`.
 - `src/routes/decide/+page.svelte`, `delegate/`, `ignore/` — Empty detail placeholders
@@ -39,15 +39,14 @@ Path-based navigation. `/` redirects to `/inbox`.
 - `src/lib/components/ActionableDetail.svelte` — Shared detail view for actionables: title, priority badge, summary, linked message cards.
 - `src/lib/components/OutgoingMessageDetail.svelte` — Shared outgoing message detail used by drafts (editable recipient/subject/body) and sent (read-only), with actionable/message context links.
 - `src/lib/components/DailyBriefDetail.svelte` — Daily brief renderer using unified (`remark-parse`/`remark-gfm`/`remark-rehype`/`rehype-stringify`) plus actionable-driven sections (decide/delegate/watchlist).
-- `src/routes/*/ListPane.svelte` (+ `src/routes/ActionablesListPane.svelte`) — View-specific list-pane UIs extracted from root layout.
+- `src/routes/SidebarListPane.svelte` — Unified left-panel list component used for inbox, drafts/sent, and actionables modes.
 - `src/lib/components/ui/` — shadcn: button, badge, resizable, scroll-area, separator, sheet.
 
 ## UI Layout
 
-Three-column inbox-style layout:
+Two-pane inbox-style layout:
 
-1. **Nav sidebar** (~15%): "Innate" header + dev panel wrench icon. Mail section (Inbox/Drafts/Sent) with counts. Separator. Actionables section (Decide/Delegate/Ignore) with open-item counts.
-2. **List pane** (~30%): Context-sensitive — inbox messages, actionables, draft messages, or sent messages with selection highlighting.
-3. **Detail pane** (~55%): Inbox default shows markdown daily brief + actionable rollups; otherwise message body, actionable detail, draft editor, or sent message detail.
+1. **Left pane** (~35%): "Innate" header + dev panel; mail/actionable nav items unfold to reveal their lists inline (messages, drafts, sent, or actionables).
+2. **Right pane** (~65%): Inbox default shows markdown daily brief + actionable rollups; otherwise message body, actionable detail, draft editor, or sent message detail.
 
 All panes resizable. ScrollArea with `overflow-hidden` for proper height constraint.
