@@ -178,7 +178,7 @@
 		<Resizable.Pane defaultSize={36} minSize={18} maxSize={55}>
 			<div class="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
 				<div class="flex items-center px-4 py-3">
-					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline">Innate</a
+					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline">Daily brief</a
 					>
 				</div>
 				<Separator />

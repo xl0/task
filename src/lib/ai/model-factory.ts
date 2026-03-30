@@ -10,10 +10,6 @@ export function createProviderModel(provider: Provider, modelId: string, apiKey:
 				name: 'openrouter',
 				baseURL: 'https://openrouter.ai/api/v1',
 				apiKey,
-				headers: {
-					'HTTP-Referer': 'http://localhost:5173',
-					'X-Title': 'Innate'
-				}
 			});
 			return openrouter(modelId);
 		}
