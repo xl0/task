@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { workspace } from '$lib/stores/workspace.svelte';
-	import ActionableDetail from '$lib/components/actionable-detail.svelte';
+	import ActionableDetail from '$lib/components/ActionableDetail.svelte';
 	import type { ActionableId } from '$lib/types';
 
-	const actionableId = $derived($page.params.id as ActionableId);
+	const actionableId = $derived(page.params.id as ActionableId);
 	const actionable = $derived(workspace.getActionable(actionableId) ?? null);
 </script>
 

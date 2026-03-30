@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -17,7 +17,7 @@
 		return ch === 'whatsapp' ? 'WhatsApp' : ch === 'slack' ? 'Slack' : 'Email';
 	}
 
-	const messageId = $derived($page.params.id as MessageId);
+	const messageId = $derived(page.params.id as MessageId);
 	const msg = $derived(workspace.getMessage(messageId) ?? null);
 
 	$effect(() => {
@@ -39,7 +39,7 @@
 				<MailOpenIcon class="size-3.5" />
 				Mark unread
 			</Button>
-			<Badge variant="outline" class="text-xs shrink-0">
+			<Badge variant="outline" class="shrink-0 text-xs">
 				{channelLabel(msg.channel)}
 			</Badge>
 		</div>
@@ -56,7 +56,7 @@
 	</div>
 	<ScrollArea class="flex-1 overflow-hidden">
 		<div class="px-6 py-4">
-			<pre class="whitespace-pre-wrap font-sans text-sm leading-relaxed">{msg.text}</pre>
+			<pre class="font-sans text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</pre>
 		</div>
 	</ScrollArea>
 {:else}

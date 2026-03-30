@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
@@ -14,7 +15,7 @@
 	} = $props();
 
 	const selectedActionableId = $derived.by((): ActionableId | null => {
-		const match = $page.url.pathname.match(/^\/(decide|delegate|ignore)\/(a\d+)$/);
+		const match = page.url.pathname.match(/^\/(decide|delegate|ignore)\/(a\d+)$/);
 		return match ? (match[2] as ActionableId) : null;
 	});
 
@@ -34,7 +35,7 @@
 	{#each actionables as act (act.id)}
 		{@const isSelected = selectedActionableId === act.id}
 		<a
-			href="/{act.action}/{act.id}"
+			href={resolve(`/${act.action}/${act.id}`)}
 			class="flex w-full flex-col gap-1.5 border-b border-border px-4 py-3 text-left no-underline transition-colors hover:bg-accent/50
 				{isSelected ? 'bg-accent' : ''}
 				{act.status === 'done' ? 'opacity-50' : ''}"

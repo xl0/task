@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
+	import { resolve } from '$app/paths';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -46,8 +47,8 @@
 		});
 	}
 
-	function actionableHref(actionable: Actionable): string {
-		return `/${actionable.action}/${actionable.id}`;
+	function actionableHref(actionable: Actionable) {
+		return resolve(`/${actionable.action}/${actionable.id}`);
 	}
 </script>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
@@ -14,7 +15,7 @@
 	}
 
 	const selectedMessageId = $derived.by((): MessageId | null => {
-		const match = $page.url.pathname.match(/^\/inbox\/(m\d+)$/);
+		const match = page.url.pathname.match(/^\/inbox\/(m\d+)$/);
 		return match ? (match[1] as MessageId) : null;
 	});
 
@@ -42,7 +43,7 @@
 		{@const isSelected = selectedMessageId === msg.id}
 		{@const ChannelIcon = channelIcons[msg.channel]}
 		<a
-			href="/inbox/{msg.id}"
+			href={resolve('/inbox/[id]', { id: msg.id })}
 			class="flex w-full flex-col gap-1 border-b border-border px-4 py-3 text-left no-underline transition-colors hover:bg-accent/50
 				{isSelected ? 'bg-accent' : ''}
 				{!msg.read ? '' : 'opacity-60'}"

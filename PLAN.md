@@ -90,7 +90,7 @@ type DailyBriefing = {
 ### Done
 
 - Three-column inbox UI (nav, list, detail) with resizable panes
-- Path-based routing: `/brief`, `/inbox`, `/inbox/m{id}`, `/decide`, `/decide/a{id}`, `/delegate/...`, `/ignore/...`, `/drafts`, `/sent`
+- Path-based routing: `/inbox`, `/inbox/m{id}`, `/decide`, `/decide/a{id}`, `/delegate/...`, `/ignore/...`, `/drafts`, `/sent`
 - Workspace store with persisted messages, actionables, outgoingMessages, briefing
 - Mock data: 20 messages + 12 actionables + outgoing messages (draft + sent) + markdown daily briefing
 - Dev panel: import raw JSON message dumps, clear workspace

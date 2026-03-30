@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
+	import { resolve } from '$app/paths';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import type { OutgoingMessage, Channel } from '$lib/types';
@@ -125,7 +126,7 @@
 				</h3>
 				{#each linkedMessages as msg (msg.id)}
 					<a
-						href="/inbox/{msg.id}"
+						href={resolve('/inbox/[id]', { id: msg.id })}
 						class="text-sm text-foreground underline-offset-2 hover:underline"
 					>
 						{msg.subject ?? msg.senderName}

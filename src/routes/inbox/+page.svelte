@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { workspace } from '$lib/stores/workspace.svelte';
-	import DailyBriefDetail from '$lib/components/daily-brief-detail.svelte';
+	import DailyBriefDetail from '$lib/components/DailyBriefDetail.svelte';
 
 	const briefing = $derived(workspace.briefing);
 </script>
