@@ -1,0 +1,16 @@
+source:
+  type: git
+  repo: https://github.com/xl0/lovely-docs
+  branch: master
+  gitCacheDir: /home/xl0/.cache/lovely-docs/github.com/xl0/lovely-docs
+installed:
+  - huntabyte_bitsui
+  - sveltejs_svelte
+  - huntabyte_shadcn-svelte
+  - sveltejs_sveltekit
+  - runed
+  - vercel_ai
+installs: digest
+summaries: false
+llms_map: true
+installDir: lovely-docs
