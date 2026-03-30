@@ -1,18 +1,6 @@
 import type { DailyBriefing } from '$lib/types';
 
 export const mockDailyBriefing: DailyBriefing = {
-	generatedAt: '2026-03-18T12:30:00Z',
-	markdown: `# Focus for today
-
-Payments and Northwind terms are the two decisions that should not slip.
-
-## Priorities
-
-- Stabilize checkout reliability first, then sequence the hotfix safely.
-- Close the Northwind terms response before end of day.
-- Keep delegated owners unblocked so follow-ups land tomorrow.
-
-## Guidance
-
-Ignore low-signal inbox traffic unless it changes context for an active actionable.`
+	"generatedAt": "2026-03-30T16:12:52.614Z",
+	"markdown": "# CEO Daily Briefing\n\n## Immediate decisions\n- **Payments incident / API migration** — Checkout failures are affecting ~3% of live users. Tom needs a call within the hour on rollback vs hotfix. Recommended path: **rollback to stabilize customer transactions**, then assess recovery and comms. See [payment incident](/decide/a2).\n- **Northwind contract** — The earlier 2-year / 120k ARR win has changed. Northwind now wants a 1-year term with renewal, reducing current ARR to 60k, and expects an answer **by end of day**. Recommended path: **accept the 1-year term and try to secure renewal pricing or expansion language**. See [Northwind](/decide/a9).\n- **Meridian diligence meeting** — Sarah is flexible to move from Thursday 2pm to **10am** and wants revenue projections **before the call**. Internal conflict has cleared because the leadership sync moved to 3pm. Recommended path: **confirm 10am and send projections ahead of time**. See [Meridian](/decide/a1).\n\n## Delegated / ready to send\n- **VP Engineering search** — Draft ready asking Rachel to schedule intro calls next week with Candidates A and C. See [candidate outreach](/delegate/a7).\n- **People / benefits** — Draft ready asking Alex for a recommendation on the hybrid-policy concerns and to send the benefits package for sign-off by **Friday** to avoid losing provider pricing. See [people follow-up](/delegate/a10).\n\n## Informational / resolved\n- **Board deck timing** — James’s request to postpone was superseded; Thursday remains on.\n- **Horizon** — Internal concern was resolved. Team will present a phased plan: MVP at 6 weeks, full platform at 10 weeks.\n- **Marketing Q2 plan** — FYI only, no action needed.\n\n## Notable risks\n- **Customer-impacting technical risk** is the highest-priority operational issue today.\n- **Schedule compression on Thursday** remains manageable now, but only if Meridian is confirmed promptly and projections are delivered before the call.\n- **Internal comms risk** around the hybrid policy could grow if not addressed soon, though it is not yet urgent.\n\n## Recommended next moves\n1. Send the Tom note authorizing the safest path to stabilize checkout.\n2. Send Sarah the Thursday 10am confirmation and make sure finance/rev projections go out beforehand.\n3. Send Priya approval to close Northwind on revised terms.\n4. Let Rachel proceed with interviews for the top two VP Engineering candidates.\n5. Have Alex send the benefits package and a recommendation on the hybrid-policy response."
 };

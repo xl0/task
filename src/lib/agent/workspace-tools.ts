@@ -181,7 +181,7 @@ export const workspaceTools = {
 
 	insert_outgoing_message: tool({
 		description:
-			'Insert an outgoing draft/sent message. Outgoing messages represent responses/handoffs and should usually reference a parent actionable; parentMessageId is optional for direct thread replies. Timestamp auto-set. Returns { id }.',
+			'Insert an outgoing draft/sent message. Outgoing messages represent responses/handoffs and should usually reference a parent actionable; parentMessageId is optional for direct thread replies. Prefer matching the parent message channel unless there is a clear reason to switch. Timestamp auto-set. Returns { id }.',
 		inputSchema: valibotSchema(
 			v.object({
 				parentActionableId: v.optional(actionableId),

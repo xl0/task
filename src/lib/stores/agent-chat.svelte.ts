@@ -42,10 +42,15 @@ Requirements:
    - email: professional and structured
    - slack: concise and direct
    - whatsapp: conversational
+7) Channel selection: default to the original inbound channel when replying to a specific message.
+   - If parentMessageId is set, outgoing.channel should usually match that message's channel.
+   - Only switch channels when there is a clear operational reason (and reflect that in actionable.summary).
 
 Ground rules:
 - Ignore spam and phishing.
+- Ignore personal emails.
 - Be conservative with priority.
+- Delegate tasks as much as possible possible.
 - Update existing actionables/outgoings when appropriate; do not duplicate parallel records.
 
 Execution:
@@ -58,12 +63,12 @@ Execution:
   - one page / under 2 minutes to read
   - concrete recommendations and notable risks
   - no raw message ids
-  - optional links to actionables are allowed: /decide/a123, /delegate/a123, /ignore/a123
+  - optional markdown links to actionables are allowed: [text here](/decide/a123), /delegate/a123, /ignore/a123
 
 Before finishing, verify consistency:
 - no message left unclassified
 - no contradictory actionables for the same message cluster
-- outgoing links point to valid parent records
+- Links point to valid parent records.
 - briefing matches the latest actionable state
 `;
 
