@@ -5,8 +5,8 @@
 - Client-only app (SvelteKit SPA mode, SSR disabled).
 - No backend, no database; persist everything in browser `localStorage`.
 - One global **Workspace** store is the source of truth.
-- Agent loop reads/writes Workspace via typed tools.
-- UI is a projection of Workspace state.
+- An **Agent Loop** reads/writes Workspace via typed tools.
+- UI is a projection of Workspace state (never its own hidden source of truth).
 
 ## Data Model (High-Level)
 
@@ -56,7 +56,6 @@ type OutgoingMessage = {
 	subject?: string;
 	channel?: 'email' | 'slack' | 'whatsapp';
 	body: string;
-	createdAt?: string;
 	sent: boolean;
 	sentAt?: string;
 };
@@ -91,17 +90,18 @@ type BriefingItem = {
 2. Group related messages into self-contained threads/clusters.
 3. Create/refresh `actionable` records with `action` (`ignore` / `delegate` / `decide`), summary, and priority.
 4. Generate `outgoingMessage` records for `decide` and `delegate` actionables.
-5. Generate final daily briefing from latest workspace state.
-6. Persist Workspace snapshot to `localStorage`.
+5. Cross-check timeline for contradictions and "later message changed context" cases.
+6. Generate final daily briefing from latest workspace state.
+7. Persist Workspace snapshot to `localStorage`.
 
-## Next Implementation Step: Inbox UI
+## Simplification Decision
 
-- Build a simple inbox-like layout as a direct view of Workspace.
-- Left pane: message list sorted by `order`, showing sender, channel, summary, read/unread.
-- Main pane: selected message full text + linked actionables.
-- Side pane (or section): actionables list with action, priority, status, linked outgoing messages.
-- Add basic interactions: select message, toggle read, filter by action/status.
-- Keep styling minimal and reuse existing app styles/components.
+- For MVP, use a single `Actionable` entity instead of separate triage/flag objects.
+- `Actionable.action` captures the required decision: `ignore`, `delegate`, or `decide`.
+- `Actionable` is intentionally minimal: `title`, `summary`, `messageIds`, `outgoingMessageIds`, `action`, `priority`, `status`.
+- Use linked `OutgoingMessage` objects for outbound communication content.
+- `OutgoingMessage.sent` tracks draft vs sent state in one entity.
+- UI becomes a filtered view of `Actionable` list plus related outgoing messages.
 
 ## Notes / MVP Tradeoffs
 
