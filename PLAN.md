@@ -2,11 +2,12 @@
 
 ## MVP Direction
 
-- Client-only app (SvelteKit SPA mode, SSR disabled).
-- No backend, no database; persist everything in browser `localStorage`.
+- Client-only app (SvelteKit SPA mode planned, SSR currently default).
+- No backend, no database; persist everything in browser `localStorage` via runed `PersistedState`.
 - One global **Workspace** store is the source of truth.
 - An **Agent Loop** reads/writes Workspace via typed tools.
 - UI is a projection of Workspace state (never its own hidden source of truth).
+- UI state (selected message, current view) lives in the URL, not the store.
 
 ## Data Model (High-Level)
 
@@ -29,17 +30,18 @@ type Message = {
 	id: `m${number}`;
 	channel: 'email' | 'slack' | 'whatsapp';
 	senderName: string;
-	senderRole?: string;
-	receivedAt?: string;
+	subject?: string;
+	channelName?: string;
+	receivedAt: string;
 	summary: string;
 	text: string;
 	read: boolean;
-	order: number; // canonical timeline ordering
+	order: number;
 };
 
 type Actionable = {
 	id: `a${number}`;
-	messageIds: Array<`m${number}`>; // one or more related messages (thread/cluster)
+	messageIds: Array<`m${number}`>;
 	outgoingMessageIds: Array<`o${number}`>;
 	action: 'ignore' | 'delegate' | 'decide';
 	title: string;
@@ -57,22 +59,11 @@ type OutgoingMessage = {
 	channel?: 'email' | 'slack' | 'whatsapp';
 	body: string;
 	sent: boolean;
-	sentAt?: string;
 };
 
 type DailyBriefing = {
 	generatedAt: string;
-	headline: string;
-	mustDecideNow: BriefingItem[];
-	delegated: BriefingItem[];
-	watchlist: BriefingItem[];
-	summary: string; // <2 min read target
-};
-
-type BriefingItem = {
-	title: string;
-	detail: string;
-	messageIds: Array<`m${number}`>;
+	markdown: string;
 };
 ```
 
@@ -81,7 +72,7 @@ type BriefingItem = {
 - `Message` is foundational input; all other domain entities reference `messageId`s.
 - `Actionable` depends on one or more `Message` items.
 - `OutgoingMessage` optionally depends on a specific `Actionable` and/or `Message`.
-- `DailyBriefing` depends on final `actionables + outgoingMessages`.
+- `DailyBriefing` stores one markdown body; structured rollups are derived from current actionables.
 - Agent/runtime execution state and UI view state are intentionally out of Workspace.
 
 ## Agent Loop (High-Level)
@@ -94,14 +85,27 @@ type BriefingItem = {
 6. Generate final daily briefing from latest workspace state.
 7. Persist Workspace snapshot to `localStorage`.
 
-## Simplification Decision
+## Current State
 
-- For MVP, use a single `Actionable` entity instead of separate triage/flag objects.
-- `Actionable.action` captures the required decision: `ignore`, `delegate`, or `decide`.
-- `Actionable` is intentionally minimal: `title`, `summary`, `messageIds`, `outgoingMessageIds`, `action`, `priority`, `status`.
-- Use linked `OutgoingMessage` objects for outbound communication content.
-- `OutgoingMessage.sent` tracks draft vs sent state in one entity.
-- UI becomes a filtered view of `Actionable` list plus related outgoing messages.
+### Done
+
+- Three-column inbox UI (nav, list, detail) with resizable panes
+- Path-based routing: `/brief`, `/inbox`, `/inbox/m{id}`, `/decide`, `/decide/a{id}`, `/delegate/...`, `/ignore/...`, `/drafts`, `/sent`
+- Workspace store with persisted messages, actionables, outgoingMessages, briefing
+- Mock data: 20 messages + 12 actionables + outgoing messages (draft + sent) + markdown daily briefing
+- Dev panel: import raw JSON message dumps, clear workspace
+- Mark read/unread, mark all unread
+- Actionable views with priority sorting and badges
+- Drafts/Sent list panes wired to outgoing messages
+- Draft editor route (`/drafts/o{id}`) and sent detail route (`/sent/o{id}`)
+- Daily brief rendered on inbox default detail (`/inbox`) with markdown rendering via unified and actionables-derived sections
+
+### Next
+
+- Agent loop implementation (LLM-powered triage)
+- OutgoingMessage generation/refresh from agent loop (instead of static mocks)
+- Daily briefing generation/refresh from agent loop (instead of static mock)
+- Send flow from draft editor (mark sent + move to Sent)
 
 ## Notes / MVP Tradeoffs
 

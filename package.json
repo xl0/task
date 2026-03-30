@@ -47,6 +47,11 @@
 		"vite-plugin-devtools-json": "^1.0.0"
 	},
 	"dependencies": {
-		"runed": "^0.37.1"
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"runed": "^0.37.1",
+		"unified": "^11.0.5"
 	}
 }

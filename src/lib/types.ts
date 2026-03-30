@@ -38,22 +38,11 @@ export type OutgoingMessage = {
 	body: string;
 	createdAt?: string;
 	sent: boolean;
-	sentAt?: string;
 };
 
 export type DailyBriefing = {
 	generatedAt: string;
-	headline: string;
-	mustDecideNow: BriefingItem[];
-	delegated: BriefingItem[];
-	watchlist: BriefingItem[];
-	summary: string;
-};
-
-export type BriefingItem = {
-	title: string;
-	detail: string;
-	messageIds: MessageId[];
+	markdown: string;
 };
 
 export type MailboxView = 'inbox' | 'drafts' | 'sent';

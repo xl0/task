@@ -1,50 +1,67 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { workspace } from '$lib/stores/workspace.svelte';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import InboxIcon from '@lucide/svelte/icons/inbox';
 	import FileEditIcon from '@lucide/svelte/icons/file-edit';
 	import SendIcon from '@lucide/svelte/icons/send';
-	import MailIcon from '@lucide/svelte/icons/mail';
-	import HashIcon from '@lucide/svelte/icons/hash';
-	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
-	import type { Channel, MailboxView, MessageId } from '$lib/types';
+	import GavelIcon from '@lucide/svelte/icons/gavel';
+	import ForwardIcon from '@lucide/svelte/icons/forward';
+	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
+	import InboxListPane from './inbox/list-pane.svelte';
+	import DraftsListPane from './drafts/list-pane.svelte';
+	import SentListPane from './sent/list-pane.svelte';
+	import ActionablesListPane from './actionables-list-pane.svelte';
 	import DevPanel from '$lib/components/dev-panel.svelte';
 
 	let { children } = $props();
 
-	function formatTime(iso: string): string {
-		const d = new Date(iso);
-		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-	}
+	type NavView = 'inbox' | 'drafts' | 'sent' | 'decide' | 'delegate' | 'ignore';
 
-	const currentView = $derived.by((): MailboxView => {
+	const currentView = $derived.by((): NavView => {
 		const path = $page.url.pathname;
 		if (path.startsWith('/drafts')) return 'drafts';
 		if (path.startsWith('/sent')) return 'sent';
+		if (path.startsWith('/decide')) return 'decide';
+		if (path.startsWith('/delegate')) return 'delegate';
+		if (path.startsWith('/ignore')) return 'ignore';
 		return 'inbox';
 	});
 
-	const selectedMessageId = $derived.by((): MessageId | null => {
-		const match = $page.url.pathname.match(/^\/inbox\/(m\d+)$/);
-		return match ? (match[1] as MessageId) : null;
-	});
+	const draftMessages = $derived(workspace.getOutgoingMessages(false));
+	const sentMessages = $derived(workspace.getOutgoingMessages(true));
 
-	const navItems: { view: MailboxView; href: string; label: string; icon: typeof InboxIcon }[] = [
+	const mailNavItems: { view: NavView; href: string; label: string; icon: typeof InboxIcon }[] = [
 		{ view: 'inbox', href: '/inbox', label: 'Inbox', icon: InboxIcon },
 		{ view: 'drafts', href: '/drafts', label: 'Drafts', icon: FileEditIcon },
 		{ view: 'sent', href: '/sent', label: 'Sent', icon: SendIcon }
 	];
 
-	const channelIcons: Record<Channel, typeof MailIcon> = {
-		email: MailIcon,
-		slack: HashIcon,
-		whatsapp: MessageCircleIcon
-	};
+	const actionNavItems: { view: NavView; href: string; label: string; icon: typeof GavelIcon }[] = [
+		{ view: 'decide', href: '/decide', label: 'Decide', icon: GavelIcon },
+		{ view: 'delegate', href: '/delegate', label: 'Delegate', icon: ForwardIcon },
+		{ view: 'ignore', href: '/ignore', label: 'Ignore', icon: EyeOffIcon }
+	];
+
+	function navCount(view: NavView): number {
+		switch (view) {
+			case 'inbox':
+				return workspace.inboxCount;
+			case 'drafts':
+				return draftMessages.length;
+			case 'sent':
+				return sentMessages.length;
+			case 'decide':
+				return workspace.getActionablesByAction('decide').filter((a) => a.status === 'open').length;
+			case 'delegate':
+				return workspace.getActionablesByAction('delegate').filter((a) => a.status === 'open')
+					.length;
+			case 'ignore':
+				return workspace.getActionablesByAction('ignore').length;
+		}
+	}
 </script>
 
 <div class="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -58,23 +75,39 @@
 				</div>
 				<Separator />
 				<nav class="flex flex-col gap-0.5 p-2">
-					{#each navItems as item}
+					{#each mailNavItems as item}
 						{@const isActive = currentView === item.view}
-						{@const count =
-							item.view === 'inbox'
-								? workspace.inboxCount
-								: item.view === 'drafts'
-									? workspace.outgoingMessages.filter((m) => !m.sent).length
-									: workspace.outgoingMessages.filter((m) => m.sent).length}
+						{@const count = navCount(item.view)}
 						<Button
 							variant={isActive ? 'secondary' : 'ghost'}
-							class="justify-start gap-2 h-8 px-2 text-sm w-full"
+							class="h-8 w-full justify-start gap-2 px-2 text-sm"
 							href={item.href}
 						>
 							<item.icon class="size-4 shrink-0" />
 							<span class="flex-1 text-left">{item.label}</span>
 							{#if count > 0}
-								<span class="text-xs tabular-nums text-muted-foreground">{count}</span>
+								<span class="text-xs text-muted-foreground tabular-nums">{count}</span>
+							{/if}
+						</Button>
+					{/each}
+				</nav>
+
+				<Separator class="mx-2" />
+
+				<nav class="flex flex-col gap-0.5 p-2">
+					<span class="px-2 pb-1 text-xs font-medium text-muted-foreground">Actionables</span>
+					{#each actionNavItems as item}
+						{@const isActive = currentView === item.view}
+						{@const count = navCount(item.view)}
+						<Button
+							variant={isActive ? 'secondary' : 'ghost'}
+							class="h-8 w-full justify-start gap-2 px-2 text-sm"
+							href={item.href}
+						>
+							<item.icon class="size-4 shrink-0" />
+							<span class="flex-1 text-left">{item.label}</span>
+							{#if count > 0}
+								<span class="text-xs text-muted-foreground tabular-nums">{count}</span>
 							{/if}
 						</Button>
 					{/each}
@@ -84,77 +117,28 @@
 
 		<Resizable.Handle />
 
-		<!-- Message list -->
+		<!-- List pane -->
 		<Resizable.Pane defaultSize={30} minSize={20} maxSize={45}>
 			<div class="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
-				<div class="flex items-center justify-between px-4 py-3">
-					<h2 class="text-sm font-semibold">
-						{currentView === 'inbox'
-							? 'Inbox'
-							: currentView === 'drafts'
-								? 'Drafts'
-								: 'Sent'}
-					</h2>
-					{#if currentView === 'inbox'}
-						<Button
-							variant="ghost"
-							size="sm"
-							class="h-6 text-xs text-muted-foreground"
-							onclick={() => workspace.markAllUnread()}
-						>
-							Mark all unread
-						</Button>
-					{/if}
-				</div>
-				<Separator />
-				<ScrollArea class="flex-1 overflow-hidden">
-					{#if currentView === 'inbox'}
-						{#each workspace.messages as msg (msg.id)}
-							{@const isSelected = selectedMessageId === msg.id}
-							{@const ChannelIcon = channelIcons[msg.channel]}
-							<a
-								href="/inbox/{msg.id}"
-								class="flex w-full flex-col gap-1 border-b border-border px-4 py-3 text-left transition-colors hover:bg-accent/50 no-underline
-									{isSelected ? 'bg-accent' : ''}
-									{!msg.read ? '' : 'opacity-60'}"
-							>
-								<div class="flex items-center gap-2">
-									{#if !msg.read}
-										<span class="size-1.5 shrink-0 rounded-full bg-foreground"></span>
-									{/if}
-									<span class="flex-1 truncate text-sm {!msg.read ? 'font-semibold' : 'font-normal'}">
-										{msg.senderName}
-									</span>
-									<span class="shrink-0 text-xs text-muted-foreground">{formatTime(msg.receivedAt)}</span>
-								</div>
-								<div class="flex items-center gap-2">
-									<ChannelIcon class="size-3 shrink-0 text-muted-foreground" />
-									<span class="truncate text-xs text-muted-foreground">
-										{msg.summary}
-									</span>
-								</div>
-							</a>
-						{/each}
-					{:else if currentView === 'drafts'}
-						{#if workspace.outgoingMessages.filter((m) => !m.sent).length === 0}
-							<div class="flex items-center justify-center p-8 text-sm text-muted-foreground">
-								No drafts
-							</div>
-						{/if}
-					{:else}
-						{#if workspace.outgoingMessages.filter((m) => m.sent).length === 0}
-							<div class="flex items-center justify-center p-8 text-sm text-muted-foreground">
-								No sent messages
-							</div>
-						{/if}
-					{/if}
-				</ScrollArea>
+				{#if currentView === 'inbox'}
+					<InboxListPane />
+				{:else if currentView === 'drafts'}
+					<DraftsListPane />
+				{:else if currentView === 'sent'}
+					<SentListPane />
+				{:else if currentView === 'decide'}
+					<ActionablesListPane action="decide" title="Decide" />
+				{:else if currentView === 'delegate'}
+					<ActionablesListPane action="delegate" title="Delegate" />
+				{:else if currentView === 'ignore'}
+					<ActionablesListPane action="ignore" title="Ignore" />
+				{/if}
 			</div>
 		</Resizable.Pane>
 
 		<Resizable.Handle />
 
-		<!-- Message detail -->
+		<!-- Detail pane -->
 		<Resizable.Pane defaultSize={55}>
 			<div class="flex h-full min-h-0 flex-col overflow-hidden">
 				{@render children()}
