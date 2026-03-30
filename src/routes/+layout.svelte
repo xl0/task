@@ -163,6 +163,48 @@
 
 		return '';
 	}
+
+	function firstItemPathFor(view: NavView): string | null {
+		if (view === 'inbox') {
+			const first = workspace.messages[0];
+			return first ? resolve('/inbox/[id]', { id: first.id }) : null;
+		}
+
+		if (view === 'drafts') {
+			const first = draftMessages[0];
+			return first ? resolve('/drafts/[id]', { id: first.id }) : null;
+		}
+
+		if (view === 'sent') {
+			const first = sentMessages[0];
+			return first ? resolve('/sent/[id]', { id: first.id }) : null;
+		}
+
+		if (view === 'decide') {
+			const first = decideActionables[0];
+			return first ? resolve('/decide/[id]', { id: first.id }) : null;
+		}
+
+		if (view === 'delegate') {
+			const first = delegateActionables[0];
+			return first ? resolve('/delegate/[id]', { id: first.id }) : null;
+		}
+
+		const first = ignoreActionables[0];
+		return first ? resolve('/ignore/[id]', { id: first.id }) : null;
+	}
+
+	$effect(() => {
+		const path = page.url.pathname;
+		const view = currentView;
+		if (!view) return;
+		if (path !== `/${view}`) return;
+
+		const firstPath = firstItemPathFor(view);
+		if (!firstPath || firstPath === path) return;
+
+		goto(firstPath, { replaceState: true, noScroll: true });
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -178,7 +220,8 @@
 		<Resizable.Pane defaultSize={36} minSize={18} maxSize={55}>
 			<div class="flex h-full min-h-0 flex-col overflow-hidden border-r border-border">
 				<div class="flex items-center px-4 py-3">
-					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline">Daily brief</a
+					<a href={resolve('/')} class="text-sm font-semibold tracking-tight no-underline"
+						>Daily brief</a
 					>
 				</div>
 				<Separator />
